@@ -4,8 +4,8 @@ A "studio" for llm assisted prompt tuning.
 
 ## TODO
 
-- [] OpenAI backend
-- [] Agent without memory
-- [] Prompt versioning
-- [] UI
-- [] SemnanticF1
+- [ ] OpenAI backend
+- [ ] Agent without memory
+- [ ] Prompt versioning
+- [ ] UI
+- [ ] SemnanticF1
