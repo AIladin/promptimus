@@ -7,7 +7,17 @@ authors = [
     { name = "Andrii Korzhuk", email = "korzhukandrew@gmail.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "openai>=1.58.1",
+    "polars>=1.18.0",
+    "pydantic>=2.10.4",
+]
+
+[project.optional-dependencies]
+testing = [
+    "pytest>=8.3.4",
+    "pytest-asyncio>=0.25.0",
+]
 
 [build-system]
 requires = ["hatchling"]

@@ -1,0 +1,25 @@
+from enum import StrEnum
+from typing import NamedTuple
+
+from pydantic import BaseModel, ConfigDict, TypeAdapter
+
+
+class MessageRole(StrEnum):
+    USER = "user"
+    SYSTEM = "system"
+    ASSISTANT = "assistant"
+
+
+class Message(BaseModel):
+    role: MessageRole
+    content: str
+
+    model_config = ConfigDict(extra="ignore")
+
+
+History = TypeAdapter(list[Message])
+
+
+class Sample(NamedTuple):
+    x: list[Message]
+    y: Message

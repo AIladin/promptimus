@@ -1,0 +1,13 @@
+from typing import Protocol
+
+from aapo.dto import Sample
+
+
+class DatasetProtocol(Protocol):
+    def __getitem__(self, idx: int) -> Sample: ...
+
+    def __len__(self) -> int: ...
+
+    def sample(self, frac: float) -> "DatasetProtocol": ...
+
+    def split(self, frac: float) -> tuple["DatasetProtocol", "DatasetProtocol"]: ...
