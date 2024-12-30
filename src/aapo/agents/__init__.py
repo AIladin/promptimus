@@ -1,7 +1,7 @@
-from .base import BaseAgent
+from .base import AgentProtocol
 from .llm_agent import Agent
 
 __all__ = [
-    BaseAgent,
+    AgentProtocol,
     Agent,
 ]
