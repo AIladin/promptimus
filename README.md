@@ -1,14 +1,22 @@
-# Adversarial Agentic Prompt Optimization
+# Promptimus
 
-A "studio" for llm assisted prompt tuning.
+A pytorch-like API for LLM agents.
+
+See notebooks for intro.
 
 ## TODO
 
-- [x] OpenAI backend
-- [x] Agent + memory
-- [x] SemnanticF1
-- [x] Dataset
-- [ ] Optimizer
-- [ ] Dataset generation
-- [ ] Prompt versioning
-- [ ] UI
+- [x] LLM provider
+- [x] Prompts == parameters
+- [ ] Modules
+  - [x] Core logic
+  - [ ] Fancy serialization
+- [ ] Pre-build modules
+  - [ ] Structural output
+  - [ ] Memory
+  - [ ] Intent classification
+  - [ ] Tool calling
+- [ ] Tracing
+  - [ ] Minimal to csv
+  - [ ] support arise-ai/phoenix
+- [ ] Evaluation
