@@ -1,5 +1,5 @@
 from openai import AsyncOpenAI
-from aapo.dto import Message, History
+from aapo.dto import Message, History, MessageRole
 
 
 class OpenAIProvider:
@@ -13,4 +13,9 @@ class OpenAIProvider:
             model=self.model_name,
         )
 
-        return Message.model_validate(response)
+        assert response.choices
+        assert response.choices[0].message.content
+
+        return Message(
+            role=MessageRole.ASSISTANT, content=response.choices[0].message.content
+        )
