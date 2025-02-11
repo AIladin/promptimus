@@ -16,6 +16,9 @@ class Message(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    def prettify(self) -> str:
+        return f"{self.role.value}: {self.content}"
+
 
 History = TypeAdapter(list[Message])
 

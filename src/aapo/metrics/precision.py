@@ -1,4 +1,4 @@
-from aapo.agents import Agent
+from aapo.core import Module, TraceNode, TrainablePrompt
 from aapo.llms import ProviderProtocol
 
 SYSTEM_PROMPT = """
@@ -12,27 +12,25 @@ Evaluate semantic overlap using meaningful similarity rather than exact matches.
 """
 
 INPUT_FORMAT = """
-
 The groud truth:
 {gt}
-
---------------------------------
-
-The system prediction:
-{pred}
-
---------------------------------
 """
 
 
-class Precision:
+class Precision(Module):
     def __init__(self, provider: ProviderProtocol) -> None:
-        self.agent = Agent(
-            provider=provider,
-            system_prompt=SYSTEM_PROMPT,
+        super().__init__()
+        self.prompt = TrainablePrompt(SYSTEM_PROMPT, provider=provider, trainable=False)
+
+    async def forward(self, gt: str, pred: TraceNode) -> tuple[TraceNode, float]:
+        node = await self.prompt.forward(
+            TraceNode.compose(
+                INPUT_FORMAT.format(gt=gt),
+                [
+                    ("The predicted output:", pred),
+                ],
+            )
         )
 
-    async def ascore(self, gt: str, pred: str) -> float:
-        score = await self.agent.achat(INPUT_FORMAT.format(gt=gt, pred=pred))
-
-        return float(score)
+        assert node._response is not None
+        return pred, float(node._response.content)
