@@ -3,8 +3,8 @@ from aapo.dto import Message, History
 
 
 class OpenAIProvider:
-    def __init__(self, model_name: str):
-        self.client = AsyncOpenAI()
+    def __init__(self, model_name: str, **client_kwargs):
+        self.client = AsyncOpenAI(**client_kwargs)
         self.model_name = model_name
 
     async def achat(self, history: list[Message]) -> Message:
