@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from copy import deepcopy
 from typing import Any, Self
+
+from aapo.llms.base import ProviderProtocol
 
 from .parameters import Prompt
 
@@ -11,16 +12,24 @@ class Module(ABC):
         self._submodules: dict[str, "Module"] = {}
 
     def __setattr__(self, name: str, value: Any) -> None:
+        if value is self:
+            return
+
         if isinstance(value, Prompt):
             self._parameters[name] = value
         elif isinstance(value, Module):
             self._submodules[name] = value
 
-        setattr(self, name, value)
+        super().__setattr__(name, value)
 
-    @property
-    def parameters(self) -> list[Prompt]:
-        return list(self._parameters.values())
+    def with_provider(self, provider: ProviderProtocol) -> Self:
+        for v in self._parameters.values():
+            v.provider = provider
+
+        for v in self._submodules.values():
+            v.with_provider(provider)
+
+        return self
 
     def serialize(self) -> dict[str, Any]:
         return {
@@ -36,9 +45,6 @@ class Module(ABC):
             self._submodules[k].load_dict(v)
 
         return self
-
-    def copy(self) -> Self:
-        return deepcopy(self)
 
     @abstractmethod
     async def forward(self, *_: Any, **__: Any) -> Any: ...

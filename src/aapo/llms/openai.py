@@ -1,5 +1,6 @@
 from openai import AsyncOpenAI
-from aapo.dto import Message, History, MessageRole
+
+from aapo.dto import History, Message, MessageRole
 
 
 class OpenAIProvider:

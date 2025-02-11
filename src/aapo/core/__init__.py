@@ -1,8 +1,7 @@
 from .module import Module
-from .parameters import TraceNode, TrainablePrompt
+from .parameters import Prompt
 
 __all__ = [
     Module,
-    TraceNode,
-    TrainablePrompt,
+    Prompt,
 ]

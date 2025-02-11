@@ -8,6 +8,7 @@ class MessageRole(StrEnum):
     USER = "user"
     SYSTEM = "system"
     ASSISTANT = "assistant"
+    TOOL = "tool"
 
 
 class Message(BaseModel):
