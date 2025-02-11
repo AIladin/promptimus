@@ -1,6 +1,6 @@
 from openai import AsyncOpenAI
 
-from aapo.dto import History, Message, MessageRole
+from promptimus.dto import History, Message, MessageRole
 
 
 class OpenAIProvider:

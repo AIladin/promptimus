@@ -1,6 +1,6 @@
-from aapo.dto import Message, MessageRole
-from aapo.errors import ProviderNotSet
-from aapo.llms import ProviderProtocol
+from promptimus.dto import Message, MessageRole
+from promptimus.errors import ProviderNotSet
+from promptimus.llms import ProviderProtocol
 
 
 class Prompt:

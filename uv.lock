@@ -2,43 +2,6 @@ version = 1
 requires-python = ">=3.12"
 
 [[package]]
-name = "aapo"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "openai" },
-    { name = "polars" },
-    { name = "pydantic" },
-]
-
-[package.optional-dependencies]
-testing = [
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "ipykernel" },
-    { name = "rich" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "openai", specifier = ">=1.58.1" },
-    { name = "polars", specifier = ">=1.18.0" },
-    { name = "pydantic", specifier = ">=2.10.4" },
-    { name = "pytest", marker = "extra == 'testing'", specifier = ">=8.3.4" },
-    { name = "pytest-asyncio", marker = "extra == 'testing'", specifier = ">=0.25.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "ipykernel", specifier = ">=6.29.5" },
-    { name = "rich", specifier = ">=13.9.4" },
-]
-
-[[package]]
 name = "annotated-types"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -495,6 +458,43 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a1/e1/bd15cb8ffdcfeeb2bdc215de3c3cffca11408d829e4b8416dcfe71ba8854/prompt_toolkit-3.0.50.tar.gz", hash = "sha256:544748f3860a2623ca5cd6d2795e7a14f3d0e1c3c9728359013f79877fc89bab", size = 429087 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e4/ea/d836f008d33151c7a1f62caf3d8dd782e4d15f6a43897f64480c2b8de2ad/prompt_toolkit-3.0.50-py3-none-any.whl", hash = "sha256:9b6427eb19e479d98acff65196a307c555eb567989e6d88ebbb1b509d9779198", size = 387816 },
+]
+
+[[package]]
+name = "promptimus"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "openai" },
+    { name = "polars" },
+    { name = "pydantic" },
+]
+
+[package.optional-dependencies]
+testing = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "ipykernel" },
+    { name = "rich" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "openai", specifier = ">=1.58.1" },
+    { name = "polars", specifier = ">=1.18.0" },
+    { name = "pydantic", specifier = ">=2.10.4" },
+    { name = "pytest", marker = "extra == 'testing'", specifier = ">=8.3.4" },
+    { name = "pytest-asyncio", marker = "extra == 'testing'", specifier = ">=0.25.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "ipykernel", specifier = ">=6.29.5" },
+    { name = "rich", specifier = ">=13.9.4" },
 ]
 
 [[package]]

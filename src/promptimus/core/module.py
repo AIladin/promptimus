@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Self
 
-from aapo.llms.base import ProviderProtocol
+from promptimus.llms.base import ProviderProtocol
 
 from .parameters import Prompt
 

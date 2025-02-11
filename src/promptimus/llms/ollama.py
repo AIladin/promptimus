@@ -1,4 +1,4 @@
-from aapo.dto import Message
+from promptimus.dto import Message
 
 from .openai import OpenAIProvider
 
