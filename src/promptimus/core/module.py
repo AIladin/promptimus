@@ -1,8 +1,10 @@
+import os
 from abc import ABC, abstractmethod
 from typing import Any, Self
 
 from promptimus.llms.base import ProviderProtocol
 
+from .checkpointing import module_dict_from_toml_str, module_dict_to_toml_str
 from .parameters import Prompt
 
 
@@ -43,6 +45,20 @@ class Module(ABC):
 
         for k, v in checkpoint["submodules"].items():
             self._submodules[k].load_dict(v)
+
+        return self
+
+    def save(self, path: str | os.PathLike):
+        """Stores serialized module to a TOML file"""
+        with open(path, "w") as f:
+            module_dict = self.serialize()
+            f.write(module_dict_to_toml_str(module_dict))
+
+    def load(self, path: str | os.PathLike) -> Self:
+        """Loads TOML file and modifies inplace module object."""
+        with open(path, "r") as f:
+            module_dict = module_dict_from_toml_str(f.read())
+            self.load_dict(module_dict)
 
         return self
 

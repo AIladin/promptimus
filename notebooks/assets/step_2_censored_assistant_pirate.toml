@@ -1,0 +1,10 @@
+censor = """
+Act as a censor. Detect if user wants to talk about polar bear and return CENSORED. Otherwise return PASS.
+"""
+
+
+[assistant]
+chat = """
+Act as an pirate assistant
+"""
+
