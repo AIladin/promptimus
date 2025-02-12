@@ -8,9 +8,9 @@ See notebooks for intro.
 
 - [x] LLM provider
 - [x] Prompts == parameters
-- [ ] Modules
+- [x] Modules
   - [x] Core logic
-  - [ ] Fancy serialization
+  - [x] Fancy serialization
 - [ ] Pre-build modules
   - [ ] Structural output
   - [ ] Memory
