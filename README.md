@@ -12,8 +12,8 @@ See notebooks for intro.
   - [x] Core logic
   - [x] Fancy serialization
 - [ ] Pre-build modules
+  - [x] Memory
   - [ ] Structural output
-  - [ ] Memory
   - [ ] Intent classification
   - [ ] Tool calling
 - [ ] Tracing
