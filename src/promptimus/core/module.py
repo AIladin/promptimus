@@ -5,19 +5,19 @@ from typing import Any, Self
 from promptimus.llms.base import ProviderProtocol
 
 from .checkpointing import module_dict_from_toml_str, module_dict_to_toml_str
-from .parameters import Prompt
+from .parameters import Parameter, Prompt
 
 
 class Module(ABC):
     def __init__(self):
-        self._parameters: dict[str, Prompt] = {}
+        self._parameters: dict[str, Parameter] = {}
         self._submodules: dict[str, "Module"] = {}
 
     def __setattr__(self, name: str, value: Any) -> None:
         if value is self:
             return
 
-        if isinstance(value, Prompt):
+        if isinstance(value, Parameter):
             self._parameters[name] = value
         elif isinstance(value, Module):
             self._submodules[name] = value
@@ -26,7 +26,8 @@ class Module(ABC):
 
     def with_provider(self, provider: ProviderProtocol) -> Self:
         for v in self._parameters.values():
-            v.provider = provider
+            if isinstance(v, Prompt):
+                v.provider = provider
 
         for v in self._submodules.values():
             v.with_provider(provider)
@@ -35,13 +36,13 @@ class Module(ABC):
 
     def serialize(self) -> dict[str, Any]:
         return {
-            "params": {k: v.prompt for k, v in self._parameters.items()},
+            "params": {k: v.value for k, v in self._parameters.items()},
             "submodules": {k: v.serialize() for k, v in self._submodules.items()},
         }
 
     def load_dict(self, checkpoint: dict[str, Any]) -> Self:
         for k, v in checkpoint["params"].items():
-            self._parameters[k].prompt = v
+            self._parameters[k].value = v
 
         for k, v in checkpoint["submodules"].items():
             self._submodules[k].load_dict(v)

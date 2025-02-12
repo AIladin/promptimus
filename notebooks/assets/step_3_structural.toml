@@ -1,0 +1,26 @@
+retry_template = """
+Your response does not conform to the required schema. Please correct your output by ensuring it matches the expected format and constraints. 
+
+**Schema Validation Error:**  
+`{error_message}`  
+  
+Please reattempt the response, ensuring strict adherence to the schema.    
+"""
+
+
+[predictor]
+prompt = """
+You are designed to generate structured JSON outputs adhering to a predefined schema without any embellishments or formatting.
+
+Schema Description: {'$defs': {'Operation': {'enum': ['sum', 'sub', 'div', 'mul'], 'title': 'Operation', 'type': 'string'}}, 'properties': {'reasoning': {'title': 'Reasoning', 'type': 'string'}, 'a': {'description': 'The left operand.', 'title': 'A', 'type': 'number'}, 'b': {'description': 'The right operand.', 'title': 'B', 'type': 'number'}, 'op': {'$ref': '#/$defs/Operation', 'description': 'The operation to execute.'}}, 'required': ['reasoning', 'a', 'b', 'op'], 'title': 'CalculatorSchema', 'type': 'object'}
+
+Response Guidelines:
+- Ensure all required fields are present and correctly formatted. 
+- Enforce any constraints on fields (e.g., length limits, specific formats) strictly.
+- Exclude optional fields if they aren't applicable; do not return null for them.
+- Provide valid JSON output without additional commentary, formatting markers like ```json, or unnecessary line breaks.
+
+Example Output:
+{"x": "test"}
+"""
+
