@@ -41,14 +41,16 @@ class MemoryModule(Module):
         self.prompt = Prompt(system_prompt)
         self.memory = Memory(memory_size)
 
-    async def forward(self, history: list[Message] | Message | str) -> Message:
+    async def forward(
+        self, history: list[Message] | Message | str, **kwargs
+    ) -> Message:
         if isinstance(history, Message):
             history = [history]
         elif isinstance(history, str):
             history = [Message(role=MessageRole.USER, content=history)]
 
         self.memory.extend(history)
-        response = await self.prompt.forward(self.memory.as_list())
+        response = await self.prompt.forward(self.memory.as_list(), **kwargs)
         self.memory.add_message(response)
 
         return response

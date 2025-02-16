@@ -28,5 +28,6 @@ packages = ["src/promptimus"]
 [dependency-groups]
 dev = [
     "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.5",
     "rich>=13.9.4",
 ]

@@ -1,6 +1,6 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Self
+from typing import Any, Generic, Self, TypeVar, Union
 
 from promptimus.llms.base import ProviderProtocol
 
@@ -49,11 +49,15 @@ class Module(ABC):
 
         return self
 
+    def describe(self) -> str:
+        """Returns module as TOML string"""
+        module_dict = self.serialize()
+        return module_dict_to_toml_str(module_dict)
+
     def save(self, path: str | os.PathLike):
         """Stores serialized module to a TOML file"""
         with open(path, "w") as f:
-            module_dict = self.serialize()
-            f.write(module_dict_to_toml_str(module_dict))
+            f.write(self.describe())
 
     def load(self, path: str | os.PathLike) -> Self:
         """Loads TOML file and modifies inplace module object."""
@@ -65,3 +69,21 @@ class Module(ABC):
 
     @abstractmethod
     async def forward(self, *_: Any, **__: Any) -> Any: ...
+
+
+T = TypeVar("T", bound=Union[Parameter, Module])
+
+
+class ModuleDict(Module, Generic[T]):
+    """A dict wrapper to handle serialization"""
+
+    def __init__(self, **kwargs: T):
+        super().__init__()
+
+        self.objects_map = kwargs
+
+        for k, v in self.objects_map.items():
+            setattr(self, k, v)
+
+    async def forward(self, *_: Any, **__: Any) -> Any:
+        raise NotImplementedError
