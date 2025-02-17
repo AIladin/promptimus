@@ -11,11 +11,9 @@ See notebooks for intro.
 - [x] Modules
   - [x] Core logic
   - [x] Fancy serialization
-- [ ] Pre-build modules
+- [x] Pre-build modules
   - [x] Memory
-  - [ ] Structural output
-  - [ ] Intent classification
-  - [ ] Tool calling
+  - [x] Tool calling
 - [ ] Tracing
   - [ ] Minimal to csv
   - [ ] support arise-ai/phoenix

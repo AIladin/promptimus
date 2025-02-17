@@ -141,10 +141,11 @@ By following these guidelines, you will ensure clear, consistent, and tool-depen
 
 class ToolCallingAgent(Module):
     ANSWER_PATT = re.compile(
-        r".*Thought:(?P<thought>.+).*?Answer:(?P<answer>.+).*", re.DOTALL
+        r"^.*?Thought:\s*(?P<thought>.+?)\s*Answer:\s*(?P<answer>.+)(?=.*?Thought:|.*).*",
+        re.DOTALL,
     )
     TOOL_CALL_PATT = re.compile(
-        r".*Thought:(?P<thought>.+).*?Action: *(?P<action>[^ \n]+).*?Action Input:(?P<action_input>.+\}).*",
+        r"^.*?Thought:\s*(?P<thought>.+?)\s*Action:\s*(?P<action>\S+)\s*Action Input:\s*(?P<action_input>\{.+?\})(?=.*Thought:|.*).*",
         re.DOTALL,
     )
 
@@ -158,7 +159,7 @@ class ToolCallingAgent(Module):
 
     def __init__(
         self,
-        tools: list[Tool],
+        tools: list[Tool | Callable],
         max_steps: int = 5,
         memory_size: int = 20,
         prompt: str | None = None,
@@ -169,8 +170,12 @@ class ToolCallingAgent(Module):
         self.max_steps = max_steps
         self.observation_role = observation_role
 
-        self.tools = ModuleDict(**{tool.name: tool for tool in tools})
-        self.predicor = MemoryModule(
+        converted_tools: list[Tool] = [
+            tool if isinstance(tool, Tool) else Tool.decorate(tool) for tool in tools
+        ]
+
+        self.tools = ModuleDict(**{tool.name: tool for tool in converted_tools})
+        self.predictor = MemoryModule(
             memory_size, prompt if prompt is not None else DEFAULT_PROMPT
         )
 
@@ -188,33 +193,46 @@ class ToolCallingAgent(Module):
         self, request: list[Message] | Message | str, **kwargs
     ) -> Message:
         for step in range(self.max_steps):
-            response = await self.predicor.forward(
+            response = await self.predictor.forward(
                 request,
                 tool_desc=self.tool_desc,
                 tool_names=self.tool_names,
             )
 
+            # TOOL path
             if (match := self.TOOL_CALL_PATT.match(response.content)) is not None:
                 tool_name = match.group("action").strip("`'\" \n")
 
-                tool = self.tools.objects_map.get(tool_name)
+                # cut extra output from memory
+                self.predictor.memory.replace_last(
+                    Message(
+                        role=MessageRole.ASSISTANT,
+                        content=(
+                            f'Thought:{match.group("thought")}'
+                            f'\nAction:{tool_name}'
+                            f'\nAction Input: {match.group("action_input")}'
+                        ),
+                    )
+                )
 
+                # check if tool name is valid
+                tool = self.tools.objects_map.get(tool_name)
                 if tool is None:
-                    request = [
-                        Message(
-                            role=self.observation_role,
-                            content=self.INVALID_TOOL_NAME_MESSAGE.format(
-                                name=tool_name, tool_names=self.tool_names
-                            ),
-                        )
-                    ]
+                    request = Message(
+                        role=self.observation_role,
+                        content=self.INVALID_TOOL_NAME_MESSAGE.format(
+                            name=tool_name, tool_names=self.tool_names
+                        ),
+                    )
                     continue
 
+                # check if parameters is valid & execute tool
                 try:
                     tool_response = await tool.forward(
                         match.group("action_input").strip("`'\" \n")
                     )
                 except (ValidationError, json.JSONDecodeError) as e:
+                    # invalid params case
                     request = [
                         Message(
                             role=self.observation_role,
@@ -223,24 +241,34 @@ class ToolCallingAgent(Module):
                     ]
                     continue
 
-                request = [
-                    Message(
-                        role=self.observation_role,
-                        content=self.TOOL_OUTPUT_MESSAGE.format(output=tool_response),
-                    )
-                ]
+                # valid tool output
+                request = Message(
+                    role=self.observation_role,
+                    content=self.TOOL_OUTPUT_MESSAGE.format(output=tool_response),
+                )
                 continue
 
+            # USER response path
             elif (match := self.ANSWER_PATT.match(response.content)) is not None:
+                # cut extra output from memory
+                self.predictor.memory.replace_last(
+                    Message(
+                        role=MessageRole.ASSISTANT,
+                        content=(
+                            f'Thought:{match.group("thought")}'
+                            f'\nAnswer:{match.group("answer")}'
+                        ),
+                    )
+                )
+                # valid user response
                 return Message(
                     role=MessageRole.ASSISTANT, content=match.group("answer").strip()
                 )
             else:
-                request = [
-                    Message(
-                        role=self.observation_role,
-                        content=self.INVALID_FORMAT_MESSAGE,
-                    )
-                ]
+                # invalid user response
+                request = Message(
+                    role=self.observation_role,
+                    content=self.INVALID_FORMAT_MESSAGE,
+                )
 
         raise MaxIterExceeded()

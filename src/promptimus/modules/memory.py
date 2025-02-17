@@ -17,6 +17,9 @@ class Memory:
         self.data.extend(history)
         return self
 
+    def replace_last(self, message: Message):
+        self.data[-1] = message
+
     def reset(self):
         self.data.clear()
 
