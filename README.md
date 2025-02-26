@@ -16,5 +16,5 @@ See notebooks for intro.
   - [x] Tool calling
 - [ ] Tracing
   - [ ] Minimal to csv
-  - [ ] support arise-ai/phoenix
+  - [x] support arise-ai/phoenix
 - [ ] Evaluation
