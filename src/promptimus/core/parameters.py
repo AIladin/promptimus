@@ -32,11 +32,14 @@ class Prompt(Parameter[str]):
         super().__init__(value)
         self.provider = provider
 
-    async def forward(self, history: list[Message], **kwargs) -> Message:
+    async def _call_prvider(self, full_input: list[Message]) -> Message:
         if self.provider is None:
             raise ProviderNotSet()
+        result = await self.provider.achat(full_input)
+        return result
 
-        prediction = await self.provider.achat(
+    async def forward(self, history: list[Message], **kwargs) -> Message:
+        prediction = await self._call_prvider(
             [Message(role=MessageRole.SYSTEM, content=self.value.format_map(kwargs))]
             + history
         )
