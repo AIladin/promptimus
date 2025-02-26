@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@5
+      - uses: astral-sh/setup-uv@5.3.0
 
 
       - name: Build release distributions
