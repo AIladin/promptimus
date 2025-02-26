@@ -2,7 +2,13 @@
 
 A pytorch-like API for LLM agents.
 
-See notebooks for intro.
+See https://github.com/AIladin/promptimus/tree/main/notebooks for notebook guides.
+
+## Installation
+
+```bash
+pip install promptimus  
+```
 
 ## TODO
 
@@ -18,3 +24,4 @@ See notebooks for intro.
   - [ ] Minimal to csv
   - [x] support arise-ai/phoenix
 - [ ] Evaluation
+- [ ] Update readme
