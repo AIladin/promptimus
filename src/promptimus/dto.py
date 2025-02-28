@@ -12,13 +12,13 @@ class MessageRole(StrEnum):
 
 
 class Message(BaseModel):
-    role: MessageRole
+    role: MessageRole | str
     content: str
 
     model_config = ConfigDict(extra="ignore")
 
     def prettify(self) -> str:
-        return f"{self.role.value}: {self.content}"
+        return f"{self.role.value if isinstance(self.role, MessageRole) else self.role}: {self.content}"
 
 
 History = TypeAdapter(list[Message])
