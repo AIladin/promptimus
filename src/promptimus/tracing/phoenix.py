@@ -72,7 +72,7 @@ def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
                 if isinstance(result, Message):
                     span.set_output(result.model_dump_json())
                 else:
-                    span.set_input(str(history))
+                    span.set_output(str(result))
                 span.set_status(Status(StatusCode.OK))
             return result
 
