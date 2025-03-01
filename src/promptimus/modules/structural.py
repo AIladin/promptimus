@@ -5,6 +5,7 @@ from pydantic import BaseModel, ValidationError
 from promptimus.core import Parameter
 from promptimus.dto import Message, MessageRole
 from promptimus.errors import FailedToParseOutput
+from promptimus.utils import format_pydantic_schema
 
 from .memory import MemoryModule, Module
 
@@ -53,7 +54,7 @@ class StructuralOutput(Module, Generic[T]):
             system_prompt=system_prompt
             if system_prompt is not None
             else DEFAULT_SYSTEM_PROMPT.format(
-                schema_description=output_model.model_json_schema()
+                schema_description=format_pydantic_schema(output_model)
             ),
         )
 
