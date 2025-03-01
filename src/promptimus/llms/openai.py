@@ -3,7 +3,7 @@ from openai import AsyncOpenAI
 from promptimus.dto import History, Message, MessageRole
 
 
-class OpenAIProvider:
+class OpenAILike:
     def __init__(self, model_name: str, **client_kwargs):
         self.client = AsyncOpenAI(**client_kwargs)
         self.model_name = model_name
@@ -14,8 +14,8 @@ class OpenAIProvider:
             model=self.model_name,
         )
 
-        assert response.choices
-        assert response.choices[0].message.content
+        assert response.choices, response
+        assert response.choices[0].message.content, response
 
         return Message(
             role=MessageRole.ASSISTANT, content=response.choices[0].message.content

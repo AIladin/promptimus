@@ -1,3 +1,4 @@
+import json
 from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ValidationError
@@ -5,7 +6,6 @@ from pydantic import BaseModel, ValidationError
 from promptimus.core import Parameter
 from promptimus.dto import Message, MessageRole
 from promptimus.errors import FailedToParseOutput
-from promptimus.utils import format_pydantic_schema
 
 from .memory import MemoryModule, Module
 
@@ -21,9 +21,6 @@ Response Guidelines:
 - Enforce any constraints on fields (e.g., length limits, specific formats) strictly.
 - Exclude optional fields if they aren't applicable; do not return null for them.
 - Provide valid JSON output without additional commentary, formatting markers like ```json, or unnecessary line breaks.
-
-Example Output:
-{{"x": "test"}}
 """
 
 DEFAULT_RETRY_MESSAGE = """
@@ -54,7 +51,11 @@ class StructuralOutput(Module, Generic[T]):
             system_prompt=system_prompt
             if system_prompt is not None
             else DEFAULT_SYSTEM_PROMPT.format(
-                schema_description=format_pydantic_schema(output_model)
+                schema_description=json.dumps(
+                    output_model.model_json_schema(), indent=4
+                )
+                .replace("{", "{{")
+                .replace("}", "}}")
             ),
         )
 
