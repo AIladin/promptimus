@@ -69,10 +69,10 @@ class StructuralOutput(Module, Generic[T]):
         assert n_retries >= 0
         self.n_retries = n_retries
 
-    async def forward(self, request: list[Message] | Message | str) -> T:
+    async def forward(self, request: list[Message] | Message | str, **kwargs) -> T:
         with self.predictor.memory:
             for _ in range(self.n_retries):
-                response = await self.predictor.forward(request)
+                response = await self.predictor.forward(request, **kwargs)
 
                 try:
                     structured_response = self.output_model.model_validate_json(
