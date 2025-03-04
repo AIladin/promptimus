@@ -1,6 +1,6 @@
 [project]
 name = "promptimus"
-version = "0.0.1a5"
+version = "0.0.1a6"
 readme = "README.md"
 authors = [
     { name = "ailadin", email = "korzhukandrew@gmail.com" }
