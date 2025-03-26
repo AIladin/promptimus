@@ -28,9 +28,11 @@ class Prompt(Parameter[str]):
         self,
         value: str | None,
         provider: ProviderProtocol | None = None,
+        role: MessageRole | str = MessageRole.SYSTEM,
     ) -> None:
         super().__init__(value)
         self.provider = provider
+        self.role = role
 
     async def _call_prvider(self, full_input: list[Message]) -> Message:
         if self.provider is None:
@@ -38,9 +40,11 @@ class Prompt(Parameter[str]):
         result = await self.provider.achat(full_input)
         return result
 
-    async def forward(self, history: list[Message], **kwargs) -> Message:
+    async def forward(self, history: list[Message] | None = None, **kwargs) -> Message:
+        if history is None:
+            history = []
+
         prediction = await self._call_prvider(
-            [Message(role=MessageRole.SYSTEM, content=self.value.format_map(kwargs))]
-            + history
+            [Message(role=self.role, content=self.value.format_map(kwargs))] + history
         )
         return prediction
