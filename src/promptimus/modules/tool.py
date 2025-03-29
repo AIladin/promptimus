@@ -83,7 +83,9 @@ You are designed to assist with a wide range of tasks—from answering questions
 ## Tools
 
 - **Tool Access:**  
-  You have access to multiple tools: {tool_desc}.
+  You have access to multiple tools: 
+
+  {tool_desc}
 
 - **Execution Protocol:**  
   - **One Step at a Time:** In each response, you must either make a single tool call or provide a direct answer to the user.
@@ -197,6 +199,7 @@ class ToolCallingAgent(Module):
                 request,
                 tool_desc=self.tool_desc,
                 tool_names=self.tool_names,
+                **kwargs,
             )
 
             # TOOL path

@@ -70,16 +70,18 @@ wheels = [
 
 [[package]]
 name = "arize-phoenix"
-version = "7.12.3"
+version = "8.20.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aioitertools" },
     { name = "aiosqlite" },
     { name = "alembic" },
+    { name = "arize-phoenix-client" },
     { name = "arize-phoenix-evals" },
     { name = "arize-phoenix-otel" },
     { name = "authlib" },
     { name = "cachetools" },
+    { name = "email-validator" },
     { name = "fastapi" },
     { name = "grpc-interceptor" },
     { name = "grpcio" },
@@ -110,9 +112,22 @@ dependencies = [
     { name = "websockets" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/03/3f3f123ff838558627c77b10fbf7148f4f09bd020c92663210bd33da7625/arize_phoenix-7.12.3.tar.gz", hash = "sha256:b33569386a8df3318edaea98fce2bbb7d5fc22556b8c338fc45ce579e329658b", size = 3365741 }
+sdist = { url = "https://files.pythonhosted.org/packages/e6/1a/4999f44c1ec42d2c424f625a280afffbe0cd24fceaf060dc68bd182dc185/arize_phoenix-8.20.0.tar.gz", hash = "sha256:293896074535ba8654a04a9981ce682bb1817a4f72ba6f3954465d882262d65f", size = 3648946 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d0/87/d16dff9ea41e9804ecd6f576e4c65108a6d48891ea9d6d5e4d3c24c9c4e7/arize_phoenix-7.12.3-py3-none-any.whl", hash = "sha256:d8f043e48217709dde475647d640723d9cb3bdd2a85074464c0aa483eb5b1169", size = 3521749 },
+    { url = "https://files.pythonhosted.org/packages/7b/01/0443bf7584c68ab7d0af2d63c39564db902a24ff71d5dfa58b4b05b01d73/arize_phoenix-8.20.0-py3-none-any.whl", hash = "sha256:bbf4c61631cdbaa1122f9ad31a59e1166243cc64616bce9a06be8ae9a4ae1b90", size = 3823105 },
+]
+
+[[package]]
+name = "arize-phoenix-client"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/22/9e/1eb3f989b302dde3267849cda0e22cba3e0df1a335b11cc3a2e71952b0d6/arize_phoenix_client-1.1.0.tar.gz", hash = "sha256:c1d158a6080178f9c1c4b5019a0781a2cc2d7c86b80170ebafe990a9c43555d4", size = 29708 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/91/39/2f2febce07e99dfbc31b4b0beb4eef7513d9419f7742204735ba18d541dd/arize_phoenix_client-1.1.0-py3-none-any.whl", hash = "sha256:60f2081ed48e364eff80117aaa48f5ceb56d1f0a77d266e3b771f55d951fc28d", size = 32517 },
 ]
 
 [[package]]
@@ -367,6 +382,28 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/fc/f8/98eea607f65de6527f8a2e8885fc8015d3e6f5775df186e443e0964a11c3/distro-1.9.0.tar.gz", hash = "sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed", size = 60722 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2", size = 20277 },
+]
+
+[[package]]
+name = "dnspython"
+version = "2.7.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b5/4a/263763cb2ba3816dd94b08ad3a33d5fdae34ecb856678773cc40a3605829/dnspython-2.7.0.tar.gz", hash = "sha256:ce9c432eda0dc91cf618a5cedf1a4e142651196bbcd2c80e89ed5a907e5cfaf1", size = 345197 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/68/1b/e0a87d256e40e8c888847551b20a017a6b98139178505dc7ffb96f04e954/dnspython-2.7.0-py3-none-any.whl", hash = "sha256:b4c34b7d10b51bcc3a5071e7b8dee77939f1e878477eeecc965e9835f63c6c86", size = 313632 },
+]
+
+[[package]]
+name = "email-validator"
+version = "2.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dnspython" },
+    { name = "idna" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/48/ce/13508a1ec3f8bb981ae4ca79ea40384becc868bfae97fd1c942bb3a001b1/email_validator-2.2.0.tar.gz", hash = "sha256:cb690f344c617a714f22e66ae771445a1ceb46821152df8e165c5f9a364582b7", size = 48967 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d7/ee/bf0adb559ad3c786f12bcbc9296b3f5675f529199bef03e2df281fa1fadb/email_validator-2.2.0-py3-none-any.whl", hash = "sha256:561977c2d73ce3611850a06fa56b414621e0c8faa9d66f2611407d87465da631", size = 33521 },
 ]
 
 [[package]]
@@ -1112,7 +1149,7 @@ wheels = [
 
 [[package]]
 name = "promptimus"
-version = "0.0.1a3"
+version = "0.0.1a7"
 source = { editable = "." }
 dependencies = [
     { name = "arize-phoenix-otel" },
@@ -1613,16 +1650,17 @@ wheels = [
 
 [[package]]
 name = "strawberry-graphql"
-version = "0.253.1"
+version = "0.262.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "graphql-core" },
+    { name = "graphql-core", marker = "python_full_version < '4.0'" },
+    { name = "packaging" },
     { name = "python-dateutil" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f6/f3/0a18ad1f102e50aeb2ae612380bfb0264068e9d8efc4dda4b86e0052c9d1/strawberry_graphql-0.253.1.tar.gz", hash = "sha256:be43eac92e0896a7f1061ab293b89b060d369974e4c1444d16ad377d7a6f030d", size = 207814 }
+sdist = { url = "https://files.pythonhosted.org/packages/b4/32/eab6ccbdae8e1ab4e91c2b3efd1823dffcd4b668f747110c994167e577c1/strawberry_graphql-0.262.6.tar.gz", hash = "sha256:ed9c91511142581c2a1e6a398cabf9c1cc6727c67e8a80aaedeacba2a2f27955", size = 202456 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/24/b3/4745158fe8ebcd89bea2bdc6c070ef7a750bea52f6db299ae4fdc1bb2691/strawberry_graphql-0.253.1-py3-none-any.whl", hash = "sha256:f24cc55560546968255094aa080fb11a14eace4d61cd27eaf98dded863a2af17", size = 295163 },
+    { url = "https://files.pythonhosted.org/packages/11/23/8bcdfa8b2b4f639f20606c9c43b26001ac3e5c3408d3ba1cd8bb3d0d5dc5/strawberry_graphql-0.262.6-py3-none-any.whl", hash = "sha256:f0095cc86f41f24d0b4fbe5f3556f56c304ac5585867ea2af12210ed9a4d3ffd", size = 296025 },
 ]
 
 [[package]]

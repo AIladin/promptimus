@@ -21,16 +21,20 @@ def trace(module: Module, module_name: str, **provider_kwargs):
     _trace_module(module, tracer, module_name)
 
 
-def _wrap_provider_call(
+def _wrap_prompt_call(
     prompt: Prompt, tracer: OITracer, module_path: str, prompt_name: str
 ):
     def wrap(fn):
-        async def wrapper(full_input: list[Message]) -> Message:
+        async def wrapper(full_input: list[Message], **kwargs) -> Message:
             with tracer.start_as_current_span(
                 f"{module_path}.{prompt_name}",
                 openinference_span_kind="llm",
             ) as span:
                 span.set_attribute(SpanAttributes.LLM_PROMPT_TEMPLATE, prompt.value)
+                print(json.dumps(kwargs))
+                span.set_attribute(
+                    SpanAttributes.LLM_PROMPT_TEMPLATE_VARIABLES, json.dumps(kwargs)
+                )
                 span.set_input(History.dump_python(full_input))
                 for i, message in enumerate(full_input):
                     span.set_attributes(
@@ -112,7 +116,7 @@ def _trace_module(module: Module, tracer: OITracer, module_path: str):
     for key, value in module._parameters.items():
         if isinstance(value, Prompt):
             logger.debug(f"Wrapping `{module_path}.{key}`")
-            _wrap_provider_call(value, tracer, module_path, key)
+            _wrap_prompt_call(value, tracer, module_path, key)
 
     for key, value in module._submodules.items():
         if isinstance(value, Tool):

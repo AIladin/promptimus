@@ -38,9 +38,15 @@ class Memory:
 
 
 class MemoryModule(Module):
-    def __init__(self, memory_size: int, system_prompt: str | None = None):
+    def __init__(
+        self,
+        memory_size: int,
+        system_prompt: str | None = None,
+        new_message_role: MessageRole | str = MessageRole.USER,
+    ):
         super().__init__()
 
+        self.new_message_role = new_message_role
         self.prompt = Prompt(system_prompt)
         self.memory = Memory(memory_size)
 
@@ -50,7 +56,7 @@ class MemoryModule(Module):
         if isinstance(history, Message):
             history = [history]
         elif isinstance(history, str):
-            history = [Message(role=MessageRole.USER, content=history)]
+            history = [Message(role=self.new_message_role, content=history)]
 
         self.memory.extend(history)
         response = await self.prompt.forward(self.memory.as_list(), **kwargs)
