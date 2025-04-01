@@ -31,7 +31,6 @@ def _wrap_prompt_call(
                 openinference_span_kind="llm",
             ) as span:
                 span.set_attribute(SpanAttributes.LLM_PROMPT_TEMPLATE, prompt.value)
-                print(json.dumps(kwargs))
                 span.set_attribute(
                     SpanAttributes.LLM_PROMPT_TEMPLATE_VARIABLES, json.dumps(kwargs)
                 )

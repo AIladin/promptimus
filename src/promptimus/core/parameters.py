@@ -34,7 +34,11 @@ class Prompt(Parameter[str]):
         self.provider = provider
         self.role = role
 
-    async def _call_prvider(self, full_input: list[Message]) -> Message:
+    async def _call_prvider(
+        self,
+        full_input: list[Message],
+        **prompt_kwargs,  # FIXME
+    ) -> Message:
         if self.provider is None:
             raise ProviderNotSet()
         result = await self.provider.achat(full_input)
@@ -45,6 +49,7 @@ class Prompt(Parameter[str]):
             history = []
 
         prediction = await self._call_prvider(
-            [Message(role=self.role, content=self.value.format_map(kwargs))] + history
+            [Message(role=self.role, content=self.value.format_map(kwargs))] + history,
+            **kwargs,
         )
         return prediction
