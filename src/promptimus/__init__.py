@@ -1,5 +1,5 @@
 from . import llms, modules, tracing
-from .core import Module, Prompt, Parameter
+from .core import Module, Parameter, Prompt
 from .dto import Message, MessageRole
 
 __all__ = [

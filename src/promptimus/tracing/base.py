@@ -1,4 +1,5 @@
 from typing import Any
+
 from pydantic import BaseModel, TypeAdapter
 
 from promptimus.dto import Message

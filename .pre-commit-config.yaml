@@ -1,0 +1,20 @@
+repos:
+
+- repo: https://github.com/RobertCraigie/pyright-python
+  rev: v1.1.396
+  hooks:
+  # Run type checker
+  - id: pyright
+    types: [python]
+
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  # Ruff version.
+  rev: v0.9.10
+  hooks:
+    # Run the linter with import sorting.
+    - id: ruff
+      args: ["check", "--select", "I", "--fix"]
+      types: [python]
+    # Run the formatter.
+    - id: ruff-format
+      types: [python, jupyter]
