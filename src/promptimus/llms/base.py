@@ -1,7 +1,7 @@
-from typing import Protocol
+from typing import Any, Protocol
 
 from promptimus.dto import Message
 
 
 class ProviderProtocol(Protocol):
-    async def achat(self, history: list[Message]) -> Message: ...
+    async def achat(self, history: list[Message], **kwargs: Any) -> Message: ...

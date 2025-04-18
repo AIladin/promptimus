@@ -23,6 +23,16 @@ Response Guidelines:
 - Provide valid JSON output without additional commentary, formatting markers like ```json, or unnecessary line breaks.
 """
 
+DEFAULT_SYSTEM_PROMPT_NO_SCHEMA = """
+You are designed to generate structured JSON outputs adhering to a predefined schema without any embellishments or formatting.
+
+Response Guidelines:
+- Ensure all required fields are present and correctly formatted. 
+- Enforce any constraints on fields (e.g., length limits, specific formats) strictly.
+- Exclude optional fields if they aren't applicable; do not return null for them.
+- Provide valid JSON output without additional commentary, formatting markers like ```json, or unnecessary line breaks.
+"""
+
 DEFAULT_RETRY_MESSAGE = """
 Your response does not conform to the required schema. Please correct your output by ensuring it matches the expected format and constraints. 
 
@@ -43,20 +53,25 @@ class StructuralOutput(Module, Generic[T]):
         system_prompt: str | None = None,
         retry_template: str | None = None,
         retry_message_role: MessageRole = MessageRole.TOOL,
+        include_schema: bool = True,
     ):
         super().__init__()
+
+        self.model_json_schema = Parameter(
+            json.dumps(output_model.model_json_schema(), indent=4)
+        )
+
+        self.include_schema = include_schema
+
+        default_prompt = (
+            DEFAULT_SYSTEM_PROMPT if include_schema else DEFAULT_SYSTEM_PROMPT_NO_SCHEMA
+        )
 
         self.predictor = MemoryModule(
             memory_size=n_retries * 2,
             system_prompt=system_prompt
             if system_prompt is not None
-            else DEFAULT_SYSTEM_PROMPT.format(
-                schema_description=json.dumps(
-                    output_model.model_json_schema(), indent=4
-                )
-                .replace("{", "{{")
-                .replace("}", "}}")
-            ),
+            else default_prompt,
         )
 
         self.retry_template = Parameter(
@@ -70,9 +85,27 @@ class StructuralOutput(Module, Generic[T]):
         self.n_retries = n_retries
 
     async def forward(self, request: list[Message] | Message | str, **kwargs) -> T:
+        if self.include_schema:
+            kwargs["schema_description"] = self.model_json_schema.value
+            provider_kwargs = {}
+        else:
+            provider_kwargs = {
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": self.output_model.__name__,
+                        "schema": self.output_model.model_json_schema(),
+                    },
+                }
+            }
+
         with self.predictor.memory:
             for _ in range(self.n_retries):
-                response = await self.predictor.forward(request, **kwargs)
+                response = await self.predictor.forward(
+                    request,
+                    provider_kwargs=provider_kwargs,
+                    **kwargs,
+                )
 
                 try:
                     structured_response = self.output_model.model_validate_json(

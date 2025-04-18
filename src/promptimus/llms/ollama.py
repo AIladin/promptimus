@@ -11,5 +11,5 @@ class OllamaProvider:
             api_key="DUMMY",
         )
 
-    async def achat(self, history: list[Message]) -> Message:
-        return await self.client.achat(history)
+    async def achat(self, history: list[Message], **kwargs) -> Message:
+        return await self.client.achat(history, **kwargs)
