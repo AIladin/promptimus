@@ -1,6 +1,6 @@
 from openai import AsyncOpenAI
 
-from promptimus.dto import History, Message, MessageRole
+from promptimus.dto import History, Message, MessageRole, ToolRequest
 
 
 class OpenAILike:
@@ -14,16 +14,27 @@ class OpenAILike:
         self.model_name = model_name
         self.call_kwargs = {} if call_kwargs is None else call_kwargs
 
-    async def achat(self, history: list[Message]) -> Message:
+    async def achat(
+        self, history: list[Message], **kwargs
+    ) -> Message | list[ToolRequest]:
         response = await self.client.chat.completions.create(
             messages=History.dump_python(history),
             model=self.model_name,
-            **self.call_kwargs,
+            **dict(self.call_kwargs, **kwargs),
         )
 
         assert response.choices, response
-        assert response.choices[0].message.content, response
+
+        if raw_tool_calls := response.choices[0].message.tool_calls:
+            tool_calls = [
+                ToolRequest.model_validate(raw_tool_request, from_attributes=True)
+                for raw_tool_request in raw_tool_calls
+            ]
+        else:
+            tool_calls = None
 
         return Message(
-            role=MessageRole.ASSISTANT, content=response.choices[0].message.content
+            role=MessageRole.ASSISTANT,
+            content=response.choices[0].message.content or "",
+            tool_calls=tool_calls,
         )

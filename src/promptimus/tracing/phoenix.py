@@ -9,7 +9,7 @@ from phoenix.otel import register
 
 from promptimus.core import Module
 from promptimus.core.parameters import Prompt
-from promptimus.dto import History, Message
+from promptimus.dto import History, Message, ToolCalls
 from promptimus.modules.tool import Tool
 
 
@@ -25,7 +25,9 @@ def _wrap_prompt_call(
     prompt: Prompt, tracer: OITracer, module_path: str, prompt_name: str
 ):
     def wrap(fn):
-        async def wrapper(full_input: list[Message], **kwargs) -> Message:
+        async def wrapper(
+            full_input: list[Message], provider_kwargs: dict | None = None, **kwargs
+        ) -> Message:
             with tracer.start_as_current_span(
                 f"{module_path}.{prompt_name}",
                 openinference_span_kind="llm",
@@ -36,20 +38,41 @@ def _wrap_prompt_call(
                 )
                 span.set_input(History.dump_python(full_input))
                 for i, message in enumerate(full_input):
+                    if message.tool_calls:
+                        span.set_attributes(
+                            {
+                                f"llm.input_messages.{i}.message.role": message.role,
+                                f"llm.input_messages.{i}.message.content": ToolCalls.dump_json(
+                                    message.tool_calls
+                                ),
+                            }
+                        )
+                    else:
+                        span.set_attributes(
+                            {
+                                f"llm.input_messages.{i}.message.role": message.role,
+                                f"llm.input_messages.{i}.message.content": message.content,
+                            }
+                        )
+                result = await fn(full_input, provider_kwargs, **kwargs)
+                span.set_output(result.model_dump())
+
+                if result.tool_calls:
                     span.set_attributes(
                         {
-                            f"llm.input_messages.{i}.message.role": message.role,
-                            f"llm.input_messages.{i}.message.content": message.content,
+                            "llm.output_messages.0.message.role": result.role,
+                            "llm.output_messages.0.message.content": ToolCalls.dump_json(
+                                result.tool_calls
+                            ),
                         }
                     )
-                result = await fn(full_input)
-                span.set_output(result.model_dump())
-                span.set_attributes(
-                    {
-                        "llm.output_messages.0.message.role": result.role,
-                        "llm.output_messages.0.message.content": result.content,
-                    }
-                )
+                else:
+                    span.set_attributes(
+                        {
+                            "llm.output_messages.0.message.role": result.role,
+                            "llm.output_messages.0.message.content": result.content,
+                        }
+                    )
                 span.set_status(Status(StatusCode.OK))
             return result
 

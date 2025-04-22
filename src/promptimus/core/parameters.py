@@ -1,6 +1,6 @@
 from typing import Generic, TypeVar
 
-from promptimus.dto import Message, MessageRole
+from promptimus.dto import Message, MessageRole, ToolRequest
 from promptimus.errors import ParamNotSet, ProviderNotSet
 from promptimus.llms import ProviderProtocol
 
@@ -37,19 +37,28 @@ class Prompt(Parameter[str]):
     async def _call_prvider(
         self,
         full_input: list[Message],
+        provider_kwargs: dict | None,
         **prompt_kwargs,  # FIXME
     ) -> Message:
         if self.provider is None:
             raise ProviderNotSet()
-        result = await self.provider.achat(full_input)
+
+        provider_kwargs = provider_kwargs or {}
+        result = await self.provider.achat(full_input, **provider_kwargs)
         return result
 
-    async def forward(self, history: list[Message] | None = None, **kwargs) -> Message:
+    async def forward(
+        self,
+        history: list[Message] | None = None,
+        provider_kwargs: dict | None = None,
+        **kwargs,
+    ) -> Message:
         if history is None:
             history = []
 
         prediction = await self._call_prvider(
             [Message(role=self.role, content=self.value.format_map(kwargs))] + history,
+            provider_kwargs,
             **kwargs,
         )
         return prediction

@@ -20,6 +20,10 @@ class Memory:
     def replace_last(self, message: Message):
         self.data[-1] = message
 
+    def drop_last(self, n: int = 1):
+        for _ in range(n):
+            self.data.pop()
+
     def reset(self):
         self.data.clear()
 
@@ -63,3 +67,19 @@ class MemoryModule(Module):
         self.memory.add_message(response)
 
         return response
+
+    def add_message(self, message: Message) -> Self:
+        self.memory.add_message(message)
+        return self
+
+    def extend(self, history: list[Message]) -> Self:
+        self.memory.extend(history)
+        return self
+
+    def drop_last(self, n: int = 1):
+        self.memory.drop_last(n)
+        return self
+
+    def replace_last(self, message: Message):
+        self.memory.replace_last(message)
+        return self
