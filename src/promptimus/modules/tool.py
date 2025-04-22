@@ -5,8 +5,9 @@ from collections.abc import Awaitable
 from inspect import iscoroutinefunction, signature
 from typing import Callable, Generic, Self, TypeVar
 
-from pydantic import ValidationError, validate_call
+from pydantic import BaseModel, ValidationError, create_model, validate_call
 
+from promptimus import errors
 from promptimus.core import Module, Parameter
 from promptimus.core.module import ModuleDict
 from promptimus.dto import Message, MessageRole
@@ -72,6 +73,26 @@ class Tool(Module, Generic[T]):
         ).strip()
 
         return cls(fn, fn.__name__, description)
+
+    def build_model(self) -> type[BaseModel]:
+        sig = signature(self.fn)
+
+        fields = {}
+        for pname, pvalue in sig.parameters.items():
+            fields[pname] = (pvalue.annotation, pvalue.default)
+
+        return create_model(self.fn.__name__, **fields)
+
+    def to_openai_function(self) -> dict:
+        schema = self.build_model().schema()
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description.value,
+                "parameters": schema,
+            },
+        }
 
 
 # credit: https://docs.llamaindex.ai/en/stable/examples/agent/react_agent/#view-prompts
@@ -207,7 +228,7 @@ class ToolCallingAgent(Module):
                 tool_name = match.group("action").strip("`'\" \n")
 
                 # cut extra output from memory
-                self.predictor.memory.replace_last(
+                self.predictor.replace_last(
                     Message(
                         role=MessageRole.ASSISTANT,
                         content=(
@@ -254,7 +275,7 @@ class ToolCallingAgent(Module):
             # USER response path
             elif (match := self.ANSWER_PATT.match(response.content)) is not None:
                 # cut extra output from memory
-                self.predictor.memory.replace_last(
+                self.predictor.replace_last(
                     Message(
                         role=MessageRole.ASSISTANT,
                         content=(
@@ -274,4 +295,69 @@ class ToolCallingAgent(Module):
                     content=self.INVALID_FORMAT_MESSAGE,
                 )
 
+        raise MaxIterExceeded()
+
+
+class OpenaiToolCallingAgent(ToolCallingAgent):
+    def __init__(
+        self,
+        prompt: str,
+        tools: list[Tool | Callable],
+        max_steps: int = 5,
+        memory_size: int = 50,
+    ):
+        super().__init__(tools, max_steps, memory_size, prompt, MessageRole.TOOL)
+
+    async def forward(
+        self, request: list[Message] | Message | str, **kwargs
+    ) -> Message:
+        for step in range(self.max_steps):
+            response = await self.predictor.forward(
+                request,
+                provider_kwargs={
+                    "tools": [
+                        tool.to_openai_function()
+                        for tool in self.tools.objects_map.values()
+                    ]
+                },
+                **kwargs,
+            )
+
+            # TOOL path
+            if tool_requests := response.tool_calls:
+                futures = []
+
+                for tool_request in tool_requests:
+                    # check if tool name is valid
+                    if (
+                        tool := self.tools.objects_map.get(tool_request.function.name)
+                    ) is None:
+                        raise errors.InvalidToolName(
+                            f"{tool_request.function.name}, expected one of {self.tool_names}"
+                        )
+
+                    tool_future = tool.forward(tool_request.function.arguments)
+                    futures.append(tool_future)
+
+                # valid tool output
+                tool_results = await asyncio.gather(*futures)
+
+                request = [
+                    Message(
+                        role=self.observation_role,
+                        content=str(tool_result),
+                        tool_call_id=tool_request.id,
+                    )
+                    for tool_request, tool_result in zip(tool_requests, tool_results)
+                ]
+
+                continue
+
+            # USER response path
+            else:
+                # valid user response
+                return Message(
+                    role=MessageRole.ASSISTANT,
+                    content=response.content,
+                )
         raise MaxIterExceeded()

@@ -1,6 +1,6 @@
 from typing import Generic, TypeVar
 
-from promptimus.dto import Message, MessageRole
+from promptimus.dto import Message, MessageRole, ToolRequest
 from promptimus.errors import ParamNotSet, ProviderNotSet
 from promptimus.llms import ProviderProtocol
 

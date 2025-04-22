@@ -25,7 +25,9 @@ def _wrap_prompt_call(
     prompt: Prompt, tracer: OITracer, module_path: str, prompt_name: str
 ):
     def wrap(fn):
-        async def wrapper(full_input: list[Message], **kwargs) -> Message:
+        async def wrapper(
+            full_input: list[Message], provider_kwargs: dict | None = None, **kwargs
+        ) -> Message:
             with tracer.start_as_current_span(
                 f"{module_path}.{prompt_name}",
                 openinference_span_kind="llm",
@@ -42,7 +44,16 @@ def _wrap_prompt_call(
                             f"llm.input_messages.{i}.message.content": message.content,
                         }
                     )
-                result = await fn(full_input)
+
+                    for tool_call in message.tool_calls:
+                        span.set_attributes(
+                            {
+                                f"llm.input_messages.{i}.message.tool_cals.{i}.function.name": tool_call.function.name,
+                                f"llm.input_messages.{i}.message.tool_cals.{i}.function.arguments": tool_call.function.arguments,
+                            }
+                        )
+
+                result = await fn(full_input, provider_kwargs, **kwargs)
                 span.set_output(result.model_dump())
                 span.set_attributes(
                     {
