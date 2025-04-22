@@ -83,7 +83,9 @@ def _wrap_prompt_call(
 
 def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
     def wrap(fn):
-        async def wrapper(history: list[Message] | Message | Any, **kwargs) -> Message:
+        async def wrapper(
+            history: list[Message] | Message | Any, *args, **kwargs
+        ) -> Message:
             with tracer.start_as_current_span(
                 module_path,
                 openinference_span_kind="chain",
@@ -94,7 +96,7 @@ def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
                     span.set_input(history.model_dump())
                 else:
                     span.set_input(str(history))
-                result = await fn(history, **kwargs)
+                result = await fn(history, *args, **kwargs)
                 if isinstance(result, Message):
                     span.set_output(result.model_dump_json())
                 else:
