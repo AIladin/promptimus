@@ -1,4 +1,4 @@
-from promptimus.dto import Message, ToolRequest
+from promptimus.dto import Message
 
 from .openai import OpenAILike
 
@@ -11,7 +11,5 @@ class OllamaProvider:
             api_key="DUMMY",
         )
 
-    async def achat(
-        self, history: list[Message], **kwargs
-    ) -> Message | list[ToolRequest]:
+    async def achat(self, history: list[Message], **kwargs) -> Message:
         return await self.client.achat(history, **kwargs)

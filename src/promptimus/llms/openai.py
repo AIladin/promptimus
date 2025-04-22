@@ -14,9 +14,7 @@ class OpenAILike:
         self.model_name = model_name
         self.call_kwargs = {} if call_kwargs is None else call_kwargs
 
-    async def achat(
-        self, history: list[Message], **kwargs
-    ) -> Message | list[ToolRequest]:
+    async def achat(self, history: list[Message], **kwargs) -> Message:
         response = await self.client.chat.completions.create(
             messages=History.dump_python(history),
             model=self.model_name,
