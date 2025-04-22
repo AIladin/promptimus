@@ -25,16 +25,16 @@ class OpenAILike:
 
         assert response.choices, response
 
-        if raw_tool_requests := response.choices[0].message.tool_calls:
-            tool_requests = [
+        if raw_tool_calls := response.choices[0].message.tool_calls:
+            tool_calls = [
                 ToolRequest.model_validate(raw_tool_request, from_attributes=True)
-                for raw_tool_request in raw_tool_requests
+                for raw_tool_request in raw_tool_calls
             ]
         else:
-            tool_requests = []
+            tool_calls = None
 
         return Message(
             role=MessageRole.ASSISTANT,
             content=response.choices[0].message.content or "",
-            tool_calls=tool_requests,
+            tool_calls=tool_calls,
         )

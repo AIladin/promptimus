@@ -340,7 +340,7 @@ class OpenaiToolCallingAgent(ToolCallingAgent):
                     futures.append(tool_future)
 
                 # valid tool output
-                tool_results = await asyncio.gather(*futures)
+                tool_results = await asyncio.gather(*futures, return_exceptions=True)
 
                 request = [
                     Message(

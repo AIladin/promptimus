@@ -22,10 +22,13 @@ class ToolRequest(BaseModel):
     function: ToolFunction
 
 
+ToolCalls = TypeAdapter(list[ToolRequest])
+
+
 class Message(BaseModel):
     role: MessageRole | str
     content: str
-    tool_calls: list[ToolRequest] = Field(default_factory=list)
+    tool_calls: list[ToolRequest] | None = Field(default=None)
     tool_call_id: str | None = None
 
     model_config = ConfigDict(extra="ignore")
