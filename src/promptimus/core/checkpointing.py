@@ -21,16 +21,17 @@ def module_dict_to_toml_str(root_module: dict) -> str:
         container, module = q.pop()
 
         for param_name, param_value in module["params"].items():
-            container.add(
-                param_name,
-                string(
-                    f"\n{param_value.strip('\n')}\n"
-                    if isinstance(param_value, str)
-                    else param_value,
-                    multiline=True,
-                ),
-            )
-            container.add(nl())
+            if isinstance(param_value, str):
+                container.add(
+                    param_name,
+                    string(
+                        f"\n{param_value.strip('\n')}\n",
+                        multiline=True,
+                    ),
+                )
+                container.add(nl())
+            else:
+                container.add(param_name, param_value)
 
         for submodule_name, submodule in module["submodules"].items():
             submodule_container = table()

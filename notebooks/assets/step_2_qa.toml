@@ -1,0 +1,12 @@
+query_generator = """
+Generate a qery for RAG based on this question: `{question}`. Return only query without additional explanations.
+"""
+
+responder = """
+Act as an assistant, you have access to a RAG, information from it are prefixed with `Observation:` and not visible to user.
+"""
+
+
+[retriver]
+top_k = 1
+similarity_thr = 0.5
