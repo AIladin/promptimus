@@ -1210,7 +1210,7 @@ wheels = [
 
 [[package]]
 name = "promptimus"
-version = "0.0.2a2"
+version = "0.0.2a3"
 source = { editable = "." }
 dependencies = [
     { name = "arize-phoenix-otel" },

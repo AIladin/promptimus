@@ -2,7 +2,9 @@ import os
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Self, TypeVar, Union
 
-from promptimus.llms.base import ProviderProtocol
+from promptimus import errors
+from promptimus.embedders import EmbedderProtocol
+from promptimus.llms import ProviderProtocol
 
 from .checkpointing import module_dict_from_toml_str, module_dict_to_toml_str
 from .parameters import Parameter, Prompt
@@ -12,6 +14,7 @@ class Module(ABC):
     def __init__(self):
         self._parameters: dict[str, Parameter] = {}
         self._submodules: dict[str, "Module"] = {}
+        self._embedder: EmbedderProtocol | None = None
 
     def __setattr__(self, name: str, value: Any) -> None:
         if value is self:
@@ -33,6 +36,20 @@ class Module(ABC):
             v.with_provider(provider)
 
         return self
+
+    def with_embedder(self, embedder: EmbedderProtocol) -> Self:
+        self._embedder = embedder
+
+        for v in self._submodules.values():
+            v.with_embedder(embedder)
+
+        return self
+
+    @property
+    def embedder(self) -> EmbedderProtocol:
+        if self._embedder is None:
+            raise errors.EmbedderNotSet()
+        return self._embedder
 
     def serialize(self) -> dict[str, Any]:
         return {

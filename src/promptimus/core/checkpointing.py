@@ -21,14 +21,17 @@ def module_dict_to_toml_str(root_module: dict) -> str:
         container, module = q.pop()
 
         for param_name, param_value in module["params"].items():
-            container.add(
-                param_name,
-                string(
-                    f"\n{param_value.strip('\n')}\n",
-                    multiline=True,
-                ),
-            )
-            container.add(nl())
+            if isinstance(param_value, str):
+                container.add(
+                    param_name,
+                    string(
+                        f"\n{param_value.strip('\n')}\n",
+                        multiline=True,
+                    ),
+                )
+                container.add(nl())
+            else:
+                container.add(param_name, param_value)
 
         for submodule_name, submodule in module["submodules"].items():
             submodule_container = table()
@@ -58,7 +61,9 @@ def module_dict_from_toml_str(toml_str: str) -> dict:
                 module["submodules"][name] = submodue
                 q.append((value, submodue))
 
-            if isinstance(value, str):
+            elif isinstance(value, str):
                 module["params"][name] = value.strip("\n")
+            else:
+                module["params"][name] = value
 
     return root_module
