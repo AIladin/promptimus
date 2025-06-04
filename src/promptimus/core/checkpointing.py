@@ -24,7 +24,9 @@ def module_dict_to_toml_str(root_module: dict) -> str:
             container.add(
                 param_name,
                 string(
-                    f"\n{param_value.strip('\n')}\n",
+                    f"\n{param_value.strip('\n')}\n"
+                    if isinstance(param_value, str)
+                    else param_value,
                     multiline=True,
                 ),
             )
@@ -58,7 +60,9 @@ def module_dict_from_toml_str(toml_str: str) -> dict:
                 module["submodules"][name] = submodue
                 q.append((value, submodue))
 
-            if isinstance(value, str):
+            elif isinstance(value, str):
                 module["params"][name] = value.strip("\n")
+            else:
+                module["params"][name] = value
 
     return root_module
