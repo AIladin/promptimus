@@ -1,8 +1,10 @@
 from collections import deque
 from typing import Self
 
-from promptimus.core import Module, Prompt
+from promptimus.core import Module
 from promptimus.dto import Message, MessageRole
+
+from . import Prompt
 
 
 class Memory:

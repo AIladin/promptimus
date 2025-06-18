@@ -23,6 +23,9 @@ testing = [
 arize-phoeinx = [
     "arize-phoenix>=7.12.3",
 ]
+dashboard = [
+    "dashboard",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -42,3 +45,11 @@ dev = [
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+
+[tool.uv.workspace]
+members = [
+    "libs/dashboard",
+]
+
+[tool.uv.sources]
+dashboard = { workspace = true }

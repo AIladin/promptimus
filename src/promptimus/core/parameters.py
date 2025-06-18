@@ -1,15 +1,22 @@
+from hashlib import md5
 from typing import Generic, TypeVar
 
-from promptimus.dto import Message, MessageRole, ToolRequest
-from promptimus.errors import ParamNotSet, ProviderNotSet
-from promptimus.llms import ProviderProtocol
+from promptimus.errors import ParamNotSet
 
 T = TypeVar("T")
 
 
 class Parameter(Generic[T]):
-    def __init__(self, value: T | None) -> None:
+    def __init__(self, value: T | None = None) -> None:
+        self._name: str | None = None
         self._value: T | None = value
+        self._digest: str | None = (
+            md5(str(value).encode()).hexdigest() if value else None
+        )
+
+    @staticmethod
+    def value_formatter(value: T) -> str:
+        return str(value)
 
     @property
     def value(self) -> T:
@@ -18,47 +25,25 @@ class Parameter(Generic[T]):
 
         return self._value
 
+    @property
+    def digest(self) -> str:
+        if self._digest is None:
+            raise ParamNotSet()
+
+        return self._digest
+
+    def _update_digest(self) -> None:
+        digest = md5()
+        if self._name is None or self._value is None:
+            return
+
+        digest.update(self._name.encode())
+        digest.update(self.value_formatter(self._value).encode())
+
     @value.setter
     def value(self, value) -> None:
         self._value = value
+        self._update_digest()
 
 
-class Prompt(Parameter[str]):
-    def __init__(
-        self,
-        value: str | None,
-        provider: ProviderProtocol | None = None,
-        role: MessageRole | str = MessageRole.SYSTEM,
-    ) -> None:
-        super().__init__(value)
-        self.provider = provider
-        self.role = role
-
-    async def _call_prvider(
-        self,
-        full_input: list[Message],
-        provider_kwargs: dict | None,
-        **prompt_kwargs,  # FIXME
-    ) -> Message:
-        if self.provider is None:
-            raise ProviderNotSet()
-
-        provider_kwargs = provider_kwargs or {}
-        result = await self.provider.achat(full_input, **provider_kwargs)
-        return result
-
-    async def forward(
-        self,
-        history: list[Message] | None = None,
-        provider_kwargs: dict | None = None,
-        **kwargs,
-    ) -> Message:
-        if history is None:
-            history = []
-
-        prediction = await self._call_prvider(
-            [Message(role=self.role, content=self.value.format_map(kwargs))] + history,
-            provider_kwargs,
-            **kwargs,
-        )
-        return prediction
+# TODO seems prompt is yet module !!!

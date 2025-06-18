@@ -4,10 +4,10 @@ from typing import Any, Generic, Self, TypeVar, Union
 
 from promptimus import errors
 from promptimus.embedders import EmbedderProtocol
-from promptimus.llms import ProviderProtocol
+from promptimus.llms import LLMProtocol
 
 from .checkpointing import module_dict_from_toml_str, module_dict_to_toml_str
-from .parameters import Parameter, Prompt
+from .parameters import Parameter
 
 
 class Module(ABC):
@@ -15,6 +15,7 @@ class Module(ABC):
         self._parameters: dict[str, Parameter] = {}
         self._submodules: dict[str, "Module"] = {}
         self._embedder: EmbedderProtocol | None = None
+        self._llm: LLMProtocol | None = None
 
     def __setattr__(self, name: str, value: Any) -> None:
         if value is self:
@@ -27,13 +28,11 @@ class Module(ABC):
 
         super().__setattr__(name, value)
 
-    def with_provider(self, provider: ProviderProtocol) -> Self:
-        for v in self._parameters.values():
-            if isinstance(v, Prompt):
-                v.provider = provider
+    def with_llm(self, llm: LLMProtocol) -> Self:
+        self._llm = llm
 
         for v in self._submodules.values():
-            v.with_provider(provider)
+            v.with_llm(llm)
 
         return self
 
@@ -50,6 +49,12 @@ class Module(ABC):
         if self._embedder is None:
             raise errors.EmbedderNotSet()
         return self._embedder
+
+    @property
+    def llm(self) -> LLMProtocol:
+        if self._llm is None:
+            raise errors.LLMNotSet()
+        return self._llm
 
     def serialize(self) -> dict[str, Any]:
         return {

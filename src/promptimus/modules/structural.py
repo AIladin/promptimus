@@ -53,7 +53,7 @@ class StructuralOutput(Module, Generic[T]):
         system_prompt: str | None = None,
         retry_template: str | None = None,
         retry_message_role: MessageRole = MessageRole.TOOL,
-        include_schema: bool = True,
+        native: bool = True,
     ):
         super().__init__()
 
@@ -61,10 +61,10 @@ class StructuralOutput(Module, Generic[T]):
             json.dumps(output_model.model_json_schema(), indent=4)
         )
 
-        self.include_schema = include_schema
+        self.native = native
 
         default_prompt = (
-            DEFAULT_SYSTEM_PROMPT if include_schema else DEFAULT_SYSTEM_PROMPT_NO_SCHEMA
+            DEFAULT_SYSTEM_PROMPT if not native else DEFAULT_SYSTEM_PROMPT_NO_SCHEMA
         )
 
         self.predictor = MemoryModule(
@@ -85,7 +85,7 @@ class StructuralOutput(Module, Generic[T]):
         self.n_retries = n_retries
 
     async def forward(self, request: list[Message] | Message | str, **kwargs) -> T:
-        if self.include_schema:
+        if not self.native:
             kwargs["schema_description"] = self.model_json_schema.value
             provider_kwargs = {}
         else:
