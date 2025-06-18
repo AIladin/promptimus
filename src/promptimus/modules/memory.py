@@ -4,7 +4,7 @@ from typing import Self
 from promptimus.core import Module
 from promptimus.dto import Message, MessageRole
 
-from . import Prompt
+from .prompt import Prompt
 
 
 class Memory:

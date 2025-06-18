@@ -44,6 +44,3 @@ class Parameter(Generic[T]):
     def value(self, value) -> None:
         self._value = value
         self._update_digest()
-
-
-# TODO seems prompt is yet module !!!

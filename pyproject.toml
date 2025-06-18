@@ -26,6 +26,9 @@ arize-phoeinx = [
 dashboard = [
     "dashboard",
 ]
+tracing = [
+    "tracing",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -49,7 +52,9 @@ venv = ".venv"
 [tool.uv.workspace]
 members = [
     "libs/dashboard",
+    "libs/tracing",
 ]
 
 [tool.uv.sources]
 dashboard = { workspace = true }
+tracing = { workspace = true }

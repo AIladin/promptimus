@@ -1,5 +1,6 @@
 import os
 from abc import ABC, abstractmethod
+from hashlib import md5
 from typing import Any, Generic, Self, TypeVar, Union
 
 from promptimus import errors
@@ -24,9 +25,17 @@ class Module(ABC):
         if isinstance(value, Parameter):
             self._parameters[name] = value
         elif isinstance(value, Module):
+            self._check_module_recursion(value)
             self._submodules[name] = value
 
         super().__setattr__(name, value)
+
+    def _check_module_recursion(self, module: "Module"):
+        if self is module:
+            raise errors.RecursiveModule()
+
+        for sub in self._submodules.values():
+            sub._check_module_recursion(module)
 
     def with_llm(self, llm: LLMProtocol) -> Self:
         self._llm = llm
@@ -88,6 +97,17 @@ class Module(ABC):
             self.load_dict(module_dict)
 
         return self
+
+    def digest(self) -> str:
+        digest = md5()
+        for k, v in sorted(self._parameters.items()):
+            digest.update(k.encode())
+            digest.update(v.digest.encode())
+        for k, v in sorted(self._submodules.items()):
+            digest.update(k.encode())
+            digest.update(v.digest().encode())
+
+        return digest.hexdigest()
 
     @abstractmethod
     async def forward(self, *_: Any, **__: Any) -> Any: ...

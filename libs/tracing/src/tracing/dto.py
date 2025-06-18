@@ -1,13 +1,10 @@
 from datetime import datetime, timezone
 from enum import StrEnum
-from functools import cached_property
-from hashlib import md5
+from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from promptimus.dto import Message
-
-from . import erros
+from promptimus.dto import Message, MessageRole
 
 
 class LogStatus(StrEnum):
@@ -17,24 +14,31 @@ class LogStatus(StrEnum):
 
 
 class Span(BaseModel):
+    span_id: str = Field(default_factory=lambda: str(uuid4()))
+    parent_id: str | None
     module_name: str
-    parent: "Span | None"
+    module_digest: str
     start: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
     stop: datetime | None = None
     request: str
     response: str | None = None
     status: LogStatus = LogStatus.RUNNING
     parameters: dict[str, str] = Field(default_factory=dict)
+    error: str | None = None
 
 
 class Trace(BaseModel):
+    trace_id: str = Field(default_factory=lambda: str(uuid4()))
+    parent_id: str | None
     prompt_name: str
-    parent: Span
+    prompt_digest: str
     start: datetime = Field(default_factory=lambda: datetime.now(tz=timezone.utc))
     stop: datetime | None = None
     prompt: str
+    role: str | MessageRole
     prompt_args: dict[str, str]
-    history: list[Message]
+    history: list[Message] | None
     response: Message | None = None
     llm: str
     status: LogStatus = LogStatus.RUNNING
+    error: str | None = None

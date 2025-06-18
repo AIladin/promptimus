@@ -18,14 +18,14 @@ class OpenAILike(RateLimitedClient[Message]):
     ):
         super().__init__(max_concurrency, n_retries, base_wait)
         self.client = AsyncOpenAI(**client_kwargs)
-        self.model_name = model_name
+        self._model_name = model_name
         self.call_kwargs = call_kwargs or {}
 
     async def _request(self, history: list[Message], **kwargs) -> Message:
         """Perform one API call and return a Message or raise errors."""
         response = await self.client.chat.completions.create(
             messages=History.dump_python(history),
-            model=self.model_name,
+            model=self._model_name,
             **{**self.call_kwargs, **kwargs},
         )
         assert response.choices, response
@@ -47,3 +47,7 @@ class OpenAILike(RateLimitedClient[Message]):
     async def achat(self, history: list[Message], **kwargs) -> Message:
         """Public interface: perform request under concurrency limit and retry using server-specified wait."""
         return await self.execute_request(history, **kwargs)
+
+    @property
+    def model_name(self) -> str:
+        return self._model_name
