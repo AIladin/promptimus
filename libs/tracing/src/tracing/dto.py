@@ -8,9 +8,9 @@ from promptimus.dto import Message, MessageRole
 
 
 class LogStatus(StrEnum):
-    OK = "OK"
-    ERR = "ERR"
-    RUNNING = "RUNNING"
+    OK = "Ok"
+    ERR = "Err"
+    RUNNING = "Running"
 
 
 class Span(BaseModel):

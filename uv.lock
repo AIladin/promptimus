@@ -444,6 +444,7 @@ dependencies = [
     { name = "promptimus" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "tracing" },
 ]
 
 [package.metadata]
@@ -452,6 +453,7 @@ requires-dist = [
     { name = "promptimus", editable = "." },
     { name = "pydantic", specifier = ">=2.10.4" },
     { name = "pydantic-settings", specifier = ">=2.9.1" },
+    { name = "tracing", editable = "libs/tracing" },
 ]
 
 [[package]]

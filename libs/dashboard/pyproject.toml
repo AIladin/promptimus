@@ -12,6 +12,7 @@ dependencies = [
     "promptimus",
     "pydantic>=2.10.4",
     "pydantic-settings>=2.9.1",
+    "tracing",
 ]
 
 [build-system]
@@ -20,3 +21,4 @@ build-backend = "hatchling.build"
 
 [tool.uv.sources]
 promptimus = { workspace = true }
+tracing = { workspace = true }
