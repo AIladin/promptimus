@@ -5,7 +5,7 @@ from promptimus.dto import Message, MessageRole
 
 
 class DummyLLm:
-    def __init__(self, message: str = "DUMMY ASSITANT", delay: int = 3):
+    def __init__(self, message: str = "DUMMY ASSITANT", delay: float = 3):
         self.message = message
         self.delay = delay
 

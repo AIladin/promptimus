@@ -8,12 +8,14 @@ from tracing import dto
 
 
 class DashboardClient:
-    def __init__(self) -> None:
+    def __init__(self, project_id: int) -> None:
+        self.project_id = project_id
         self.exit_stack = AsyncExitStack()
         self.http_client = ClientSession(
             base_url="http://localhost:8000",
             headers={
-                "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJraW5kIjoiVG9rZW4iLCJqdGkiOiI0ZmJmZWMxNi0yNjg3LTQxYzYtODcwNi0wYWJmNTFhODZjZGMiLCJzdWIiOjEsImV4cCI6MTc1MDM0NDEzNCwibmFtZSI6InRlc3QifQ.DjTxIHaDAIwb34WCLNk61-IU00kyT3i8_UqxY6N-zdg"
+                # THIS is localhost dummy token for testing purpuses
+                "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJraW5kIjoiVG9rZW4iLCJqdGkiOiJhZjczNzkyNi0yY2M5LTQxM2YtYmNkMS1mNTVlZjI2OGJiNWQiLCJzdWIiOjEsImV4cCI6MTc1ODk4OTIwMCwibmFtZSI6InRlc3QifQ.sa507tgjokEhET5UKKdCaqmexb_NosjZy0KP8AKwsOU"
             },
         )
 
@@ -24,12 +26,13 @@ class DashboardClient:
     async def __aexit__(self, *args, **kwargs):
         await self.exit_stack.aclose()
 
-    async def post_log(self, record: dto.Span | dto.Trace):
+    async def post(self, record: dto.Span | dto.Trace):
         async with self.http_client.post(
-            "/api/traces", data=record.model_dump_json().encode()
+            f"/api/project/{self.project_id}/traces",
+            data=record.model_dump_json().encode(),
         ) as r:
             if r.status != 200:
-                logger.warning(f"{r.status} {r.text}")
+                logger.warning(f"{r.status} {await r.text()}")
                 print(record)
 
             else:
