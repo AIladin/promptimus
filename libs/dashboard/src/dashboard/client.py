@@ -6,17 +6,16 @@ from loguru import logger
 from rich import print
 from tracing import dto
 
+from .settings import settings
+
 
 class DashboardClient:
     def __init__(self, project_id: int) -> None:
         self.project_id = project_id
         self.exit_stack = AsyncExitStack()
         self.http_client = ClientSession(
-            base_url="http://localhost:8000",
-            headers={
-                # THIS is localhost dummy token for testing purpuses
-                "Authorization": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJraW5kIjoiVG9rZW4iLCJqdGkiOiJhZjczNzkyNi0yY2M5LTQxM2YtYmNkMS1mNTVlZjI2OGJiNWQiLCJzdWIiOjEsImV4cCI6MTc1ODk4OTIwMCwibmFtZSI6InRlc3QifQ.sa507tgjokEhET5UKKdCaqmexb_NosjZy0KP8AKwsOU"
-            },
+            base_url=settings.base_url,
+            headers={"Authorization": f"Bearer {settings.api_token}"},
         )
 
     async def __aenter__(self) -> Self:
