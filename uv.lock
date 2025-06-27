@@ -5,6 +5,7 @@ requires-python = ">=3.12"
 [manifest]
 members = [
     "dashboard",
+    "phoenix-tracer",
     "promptimus",
     "tracing",
 ]
@@ -1393,6 +1394,17 @@ wheels = [
 ]
 
 [[package]]
+name = "phoenix-tracer"
+version = "0.1.0"
+source = { editable = "libs/phoenix-tracer" }
+dependencies = [
+    { name = "arize-phoenix" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "arize-phoenix", specifier = ">=8.20.0" }]
+
+[[package]]
 name = "platformdirs"
 version = "4.3.6"
 source = { registry = "https://pypi.org/simple" }
@@ -1440,7 +1452,7 @@ wheels = [
 
 [[package]]
 name = "promptimus"
-version = "0.0.2a4"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "arize-phoenix-otel" },
@@ -1457,6 +1469,9 @@ arize-phoeinx = [
 ]
 dashboard = [
     { name = "dashboard" },
+]
+phoenix-tracer = [
+    { name = "phoenix-tracer" },
 ]
 testing = [
     { name = "pytest" },
@@ -1482,13 +1497,14 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "openai", specifier = ">=1.58.1" },
     { name = "openinference-semantic-conventions", specifier = ">=0.1.14" },
+    { name = "phoenix-tracer", marker = "extra == 'phoenix-tracer'", editable = "libs/phoenix-tracer" },
     { name = "pydantic", specifier = ">=2.10.4" },
     { name = "pytest", marker = "extra == 'testing'", specifier = ">=8.3.4" },
     { name = "pytest-asyncio", marker = "extra == 'testing'", specifier = ">=0.25.0" },
     { name = "tomlkit", specifier = ">=0.13.2" },
     { name = "tracing", marker = "extra == 'tracing'", editable = "libs/tracing" },
 ]
-provides-extras = ["testing", "arize-phoeinx", "dashboard", "tracing"]
+provides-extras = ["testing", "arize-phoeinx", "dashboard", "tracing", "phoenix-tracer"]
 
 [package.metadata.requires-dev]
 dev = [

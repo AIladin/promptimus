@@ -1,6 +1,6 @@
 [project]
 name = "promptimus"
-version = "0.0.2a4"
+version = "0.1.0"
 readme = "README.md"
 authors = [
     { name = "ailadin", email = "korzhukandrew@gmail.com" }
@@ -30,6 +30,10 @@ tracing = [
     "tracing",
 ]
 
+phoenix-tracer = [
+    "phoenix-tracer"
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -53,8 +57,10 @@ venv = ".venv"
 members = [
     "libs/dashboard",
     "libs/tracing",
+    "libs/phoenix-tracer",
 ]
 
 [tool.uv.sources]
 dashboard = { workspace = true }
 tracing = { workspace = true }
+phoenix-tracer = { workspace = true }

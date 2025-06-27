@@ -31,7 +31,7 @@ async def call_agent(agent: pm.Module):
 
 
 async def main(n_concurrent_calls: int = 5):
-    client = DashboardClient(1)
+    client = DashboardClient(2)
     llm = DummyLLm(delay=0.5)
     agent = TestModule().with_llm(llm)
 
