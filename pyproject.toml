@@ -20,16 +20,6 @@ testing = [
     "pytest>=8.3.4",
     "pytest-asyncio>=0.25.0",
 ]
-arize-phoeinx = [
-    "arize-phoenix>=7.12.3",
-]
-dashboard = [
-    "dashboard",
-]
-tracing = [
-    "tracing",
-]
-
 phoenix-tracer = [
     "phoenix-tracer"
 ]
@@ -55,12 +45,8 @@ venv = ".venv"
 
 [tool.uv.workspace]
 members = [
-    "libs/dashboard",
-    "libs/tracing",
     "libs/phoenix-tracer",
 ]
 
 [tool.uv.sources]
-dashboard = { workspace = true }
-tracing = { workspace = true }
 phoenix-tracer = { workspace = true }
