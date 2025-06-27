@@ -1452,21 +1452,16 @@ wheels = [
 
 [[package]]
 name = "promptimus"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
-    { name = "arize-phoenix-otel" },
     { name = "loguru" },
     { name = "openai" },
-    { name = "openinference-semantic-conventions" },
     { name = "pydantic" },
     { name = "tomlkit" },
 ]
 
 [package.optional-dependencies]
-arize-phoeinx = [
-    { name = "arize-phoenix" },
-]
 dashboard = [
     { name = "dashboard" },
 ]
@@ -1491,12 +1486,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "arize-phoenix", marker = "extra == 'arize-phoeinx'", specifier = ">=7.12.3" },
-    { name = "arize-phoenix-otel", specifier = ">=0.8.0" },
     { name = "dashboard", marker = "extra == 'dashboard'", editable = "libs/dashboard" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "openai", specifier = ">=1.58.1" },
-    { name = "openinference-semantic-conventions", specifier = ">=0.1.14" },
     { name = "phoenix-tracer", marker = "extra == 'phoenix-tracer'", editable = "libs/phoenix-tracer" },
     { name = "pydantic", specifier = ">=2.10.4" },
     { name = "pytest", marker = "extra == 'testing'", specifier = ">=8.3.4" },
@@ -1504,7 +1496,7 @@ requires-dist = [
     { name = "tomlkit", specifier = ">=0.13.2" },
     { name = "tracing", marker = "extra == 'tracing'", editable = "libs/tracing" },
 ]
-provides-extras = ["testing", "arize-phoeinx", "dashboard", "tracing", "phoenix-tracer"]
+provides-extras = ["testing", "dashboard", "tracing", "phoenix-tracer"]
 
 [package.metadata.requires-dev]
 dev = [
