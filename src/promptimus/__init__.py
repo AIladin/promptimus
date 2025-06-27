@@ -1,10 +1,8 @@
 from . import embedders as embedders
 from . import llms as llms
 from . import modules as modules
-from . import tracing as tracing
 from .core import Module as Module
 from .core import Parameter as Parameter
-from .core import Prompt as Prompt
 from .dto import Message as Message
 from .dto import MessageRole as MessageRole
-from .tracing import trace_phoenix as trace_phoenix
+from .modules import Prompt as Prompt

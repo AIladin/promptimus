@@ -1,6 +1,6 @@
 [project]
 name = "promptimus"
-version = "0.0.2a4"
+version = "0.1.0"
 readme = "README.md"
 authors = [
     { name = "ailadin", email = "korzhukandrew@gmail.com" }
@@ -20,8 +20,8 @@ testing = [
     "pytest>=8.3.4",
     "pytest-asyncio>=0.25.0",
 ]
-arize-phoeinx = [
-    "arize-phoenix>=7.12.3",
+phoenix-tracer = [
+    "phoenix-tracer"
 ]
 
 [build-system]
@@ -42,3 +42,11 @@ dev = [
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+
+[tool.uv.workspace]
+members = [
+    "libs/phoenix-tracer",
+]
+
+[tool.uv.sources]
+phoenix-tracer = { workspace = true }

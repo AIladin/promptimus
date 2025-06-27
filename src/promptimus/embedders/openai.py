@@ -19,14 +19,14 @@ class OpenAILikeEmbedder(RateLimitedClient[list[Embedding]]):
     ):
         super().__init__(max_concurrency, n_retries, base_wait)
         self.client = AsyncOpenAI(**client_kwargs)
-        self.model_name = model_name
+        self._model_name = model_name
         self.embed_kwargs = embed_kwargs or {}
 
     async def _request(self, texts: list[str], **kwargs) -> list[Embedding]:
         """Perform one embedding API call and return embeddings array."""
         response = await self.client.embeddings.create(
             input=texts,
-            model=self.model_name,
+            model=self._model_name,
             **{**self.embed_kwargs, **kwargs},
         )
         return [e.embedding for e in response.data]
@@ -39,3 +39,7 @@ class OpenAILikeEmbedder(RateLimitedClient[list[Embedding]]):
         """Embed a single text and return 1D array."""
         result = await self.aembed_batch([text], **kwargs)
         return result[0]
+
+    @property
+    def model_name(self) -> str:
+        return self._model_name

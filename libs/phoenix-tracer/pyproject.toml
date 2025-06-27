@@ -1,0 +1,16 @@
+[project]
+name = "phoenix-tracer"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "ailadin", email = "ailadin@nixos" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "arize-phoenix>=8.20.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
