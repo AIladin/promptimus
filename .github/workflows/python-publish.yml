@@ -26,7 +26,7 @@ jobs:
 
       - name: Build release distributions
         run: |
-          uv build
+          uv build --all-packages
 
       - name: Upload distributions
         uses: actions/upload-artifact@v4
