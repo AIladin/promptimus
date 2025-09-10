@@ -232,9 +232,9 @@ class ToolCallingAgent(Module):
                     Message(
                         role=MessageRole.ASSISTANT,
                         content=(
-                            f'Thought:{match.group("thought")}'
-                            f'\nAction:{tool_name}'
-                            f'\nAction Input: {match.group("action_input")}'
+                            f"Thought:{match.group('thought')}"
+                            f"\nAction:{tool_name}"
+                            f"\nAction Input: {match.group('action_input')}"
                         ),
                     )
                 )
@@ -279,8 +279,8 @@ class ToolCallingAgent(Module):
                     Message(
                         role=MessageRole.ASSISTANT,
                         content=(
-                            f'Thought:{match.group("thought")}'
-                            f'\nAnswer:{match.group("answer")}'
+                            f"Thought:{match.group('thought')}"
+                            f"\nAnswer:{match.group('answer')}"
                         ),
                     )
                 )

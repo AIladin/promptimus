@@ -1,7 +1,8 @@
 [project]
 name = "promptimus"
-version = "0.1.1"
+version = "0.1.2"
 readme = "README.md"
+description = "A plugin with arize-phoenix tracing for promptimus."
 authors = [
     { name = "ailadin", email = "korzhukandrew@gmail.com" }
 ]
@@ -9,8 +10,6 @@ requires-python = ">=3.12"
 dependencies = [
     "loguru>=0.7.3",
     "openai>=1.58.1",
-    "openinference-semantic-conventions>=0.1.14",
-    "arize-phoenix-otel>=0.8.0",
     "pydantic>=2.10.4",
     "tomlkit>=0.13.2",
 ]
@@ -20,9 +19,15 @@ testing = [
     "pytest>=8.3.4",
     "pytest-asyncio>=0.25.0",
 ]
-phoenix-tracer = [
-    "phoenix-tracer"
+
+phoenix = [
+    "promptimus-phoenix-tracer"
 ]
+
+chromadb = [
+    "promptimus-chromadb-store"
+]
+
 
 [build-system]
 requires = ["hatchling"]
@@ -45,8 +50,9 @@ venv = ".venv"
 
 [tool.uv.workspace]
 members = [
-    "libs/phoenix-tracer",
+    "libs/*",
 ]
 
 [tool.uv.sources]
-phoenix-tracer = { workspace = true }
+promptimus-phoenix-tracer = { workspace = true }
+promptimus-chromadb-store = { workspace = true }
