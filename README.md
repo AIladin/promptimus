@@ -13,6 +13,8 @@ A PyTorch-like API for building composable LLM agents with advanced tool calling
 - 📝 **Structured Output**: Pydantic schema-based JSON generation with validation
 - 💾 **Memory Management**: Conversation context with configurable memory limits
 - 🔍 **Embeddings**: Text embedding generation with batch processing support
+- 🗄️ **Vector Stores**: ChromaDB integration with async-first vector operations
+- 🤖 **RAG (Retrieval-Augmented Generation)**: Retrieval system with conversation memory
 - 📊 **Tracing**: Arize Phoenix integration for comprehensive observability
 - 💾 **Serialization**: TOML-based save/load for prompts and module configurations
 - ⚡ **Async First**: Built for high-performance asynchronous operations
@@ -91,6 +93,46 @@ agent = pm.modules.MemoryModule(
 ).with_llm(llm)
 ```
 
+**Retrieval Module**: Vector database operations for embeddings
+```python
+retrieval = pm.modules.RetrievalModule(n_results=5)
+retrieval.with_embedder(embedder).with_vector_store(vector_store)
+
+# Insert documents
+await retrieval.insert(documents)
+
+# Search for relevant content
+results = await retrieval.forward("query about AI")
+```
+
+**RAG Module**: Retrieval-Augmented Generation with conversation memory
+```python
+import chromadb
+from chromadb_store import ChromaVectorStore
+
+# Setup components
+embedder = pm.embedders.OpenAILikeEmbedder(model_name="text-embedding-3-small")
+client = chromadb.EphemeralClient()
+vector_store = ChromaVectorStore(client, "my_docs")
+
+# Create RAG agent
+rag_agent = pm.modules.RAGModule(
+    n_results=3,
+    memory_size=5
+).with_llm(llm).with_embedder(embedder).with_vector_store(vector_store)
+
+# Add documents
+await rag_agent.retrieval.insert([
+    "Machine learning is a subset of AI...",
+    "Deep learning uses neural networks...",
+    # ... more documents
+])
+
+# Query with context
+response = await rag_agent.forward("What is machine learning?")
+```
+
+
 **Structural Output**: Pydantic schema-based JSON generation
 ```python
 from pydantic import BaseModel
@@ -114,34 +156,6 @@ agent = pm.modules.ToolCallingAgent([
 result = await agent.forward("What is 15 + 27?")
 ```
 
-## 📚 Example Use Cases
-
-### Conversational AI with Memory
-```python
-agent = pm.modules.MemoryModule(
-    memory_size=5,
-    system_prompt="You are a friendly assistant."
-).with_llm(llm)
-
-await agent.forward("My favorite color is blue")
-await agent.forward("What color do I like?")  # Remembers "blue"
-```
-
-### Tool-Augmented Calculator
-```python
-@pm.modules.Tool.decorate
-def power(base: float, exponent: float) -> float:
-    """Calculate base raised to exponent."""
-    return base ** exponent
-
-calculator = pm.modules.ToolCallingAgent([
-    power,
-    # ... more math tools
-]).with_llm(llm)
-
-result = await calculator.forward("What is 2 to the power of 8?")
-```
-
 ## 🔧 Advanced Features
 
 ### Serialization
@@ -158,6 +172,36 @@ from phoenix_tracer import trace
 
 px.launch_app()
 trace(agent, "my_agent", project_name="my_project")
+```
+
+### Vector Stores
+```python
+import chromadb
+from chromadb_store import ChromaVectorStore
+
+# Setup ChromaDB vector store
+client = chromadb.PersistentClient(path="./chroma_db")
+vector_store = ChromaVectorStore(client, "my_collection")
+
+# Create embedder
+embedder = pm.embedders.OpenAILikeEmbedder(
+    model_name="text-embedding-3-small"
+)
+
+# Build RAG system
+rag = pm.modules.RAGModule(
+    n_results=5,
+    memory_size=10
+).with_llm(llm).with_embedder(embedder).with_vector_store(vector_store)
+
+# Add documents
+await rag.retrieval.insert_batch([
+    "Document 1 content...",
+    "Document 2 content...",
+])
+
+# Query with retrieval-augmented generation
+response = await rag.forward("What information do you have about X?")
 ```
 
 ### Custom Embedders
@@ -179,7 +223,7 @@ Explore our comprehensive notebook tutorials:
 
 1. **[LLM Providers & Embedders](notebooks/step_1_llm_provider.ipynb)** - Getting started with providers
 2. **[Prompts & Modules](notebooks/step_2_prompts_and_modules.ipynb)** - Core architecture concepts
-3. **[Pre-built Modules](notebooks/step_3_prebuit_modules.ipynb)** - Ready-to-use components
+3. **[Pre-built Modules](notebooks/step_3_prebuit_modules.ipynb)** - Ready-to-use components including RAG
 4. **[Custom Agents](notebooks/step_4_custom_agent.ipynb)** - Tool calling and advanced agents
 5. **[Tracing](notebooks/step_5_tracing.ipynb)** - Observability with Phoenix
 
@@ -188,7 +232,13 @@ Explore our comprehensive notebook tutorials:
 - `pm.Prompt`: System prompt management
 - `pm.llms.*`: LLM provider implementations
 - `pm.embedders.*`: Embedding provider implementations
+- `pm.vectore_store.*`: Vector store protocols and implementations
 - `pm.modules.*`: Pre-built module components
+  - `MemoryModule`: Conversation memory management
+  - `RAGModule`: Retrieval-Augmented Generation
+  - `RetrievalModule`: Vector database operations
+  - `StructuralOutput`: Schema-based JSON generation
+  - `ToolCallingAgent`: Tool-augmented agents
 
 ## 🛠️ Installation Options
 
@@ -202,7 +252,7 @@ pip install promptimus
 # Phoenix tracing support
 pip install promptimus[phoenix]
 
-# ChromaDB vector store
+# ChromaDB vector store for RAG
 pip install promptimus[chromadb]
 
 # All optional dependencies
@@ -222,6 +272,7 @@ pip install -e .[dev]
 - Built on top of modern Python async patterns
 - Integrated with [Arize Phoenix](https://phoenix.arize.com/) for tracing
 - Compatible with OpenAI and OpenAI-compatible APIs
+- Vector store support powered by [ChromaDB](https://www.trychroma.com/)
 
 ---
 
