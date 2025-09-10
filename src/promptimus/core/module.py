@@ -6,6 +6,7 @@ from typing import Any, Generic, Self, TypeVar, Union
 from promptimus import errors
 from promptimus.embedders import EmbedderProtocol
 from promptimus.llms import LLMProtocol
+from promptimus.vectore_store.base import VectorStoreProtocol
 
 from .checkpointing import module_dict_from_toml_str, module_dict_to_toml_str
 from .parameters import Parameter
@@ -17,6 +18,7 @@ class Module(ABC):
         self._submodules: dict[str, "Module"] = {}
         self._embedder: EmbedderProtocol | None = None
         self._llm: LLMProtocol | None = None
+        self._vector_store: VectorStoreProtocol | None = None
 
     def __setattr__(self, name: str, value: Any) -> None:
         if value is self:
@@ -53,6 +55,14 @@ class Module(ABC):
 
         return self
 
+    def with_vector_store(self, vector_store: VectorStoreProtocol) -> Self:
+        self._vector_store = vector_store
+
+        for v in self._submodules.values():
+            v.with_vector_store(vector_store)
+
+        return self
+
     @property
     def embedder(self) -> EmbedderProtocol:
         if self._embedder is None:
@@ -64,6 +74,12 @@ class Module(ABC):
         if self._llm is None:
             raise errors.LLMNotSet()
         return self._llm
+
+    @property
+    def vector_store(self) -> VectorStoreProtocol:
+        if self._vector_store is None:
+            raise errors.VectorStoreNotSet()
+        return self._vector_store
 
     def serialize(self) -> dict[str, Any]:
         return {
