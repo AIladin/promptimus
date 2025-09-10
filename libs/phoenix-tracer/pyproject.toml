@@ -1,7 +1,7 @@
 [project]
 name = "promptimus-phoenix-tracer"
-version = "0.1.0"
-description = "Pytorch-like LLM agents."
+version = "0.1.1"
+description = "A plugin with arize-phoenix tracing for promptimus."
 readme = "README.md"
 authors = [
     { name = "ailadin", email = "korzhukandrew@gmail.com" }

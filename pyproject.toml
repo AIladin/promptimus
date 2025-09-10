@@ -1,8 +1,8 @@
 [project]
 name = "promptimus"
-version = "0.1.2"
+version = "0.1.4"
 readme = "README.md"
-description = "A plugin with arize-phoenix tracing for promptimus."
+description = "A PyTorch-like API for building composable LLM agents"
 authors = [
     { name = "ailadin", email = "korzhukandrew@gmail.com" }
 ]
