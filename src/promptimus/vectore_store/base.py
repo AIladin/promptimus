@@ -11,10 +11,11 @@ class BaseVectorSearchResult(BaseModel):
 
 
 class VectorStoreProtocol(Protocol):
-    async def search(
-        self, embedding: Embedding, **kwargs
+    async def search(        self, embedding: Embedding, **kwargs
     ) -> list[BaseVectorSearchResult]: ...
 
     async def insert(
         self, embedding: Embedding, content: str, *args, **kwargs
     ) -> Hashable: ...
+
+    async def delete(self, idx: Hashable): ...

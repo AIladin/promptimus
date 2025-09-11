@@ -79,3 +79,14 @@ class ChromaVectorStore:
                 **kwargs,
             )
         return id_
+
+    async def delete(self, idx: str, **kwargs):
+        collection = await self._ensure_collection()
+        if isinstance(collection, AsyncCollection):
+            await collection.delete([idx], **kwargs)
+        else:
+            await asyncio.to_thread(
+                collection.delete,
+                [idx],
+                **kwargs,
+            )
