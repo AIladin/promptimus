@@ -39,7 +39,11 @@ class ChromaVectorStore:
         return self._collection
 
     async def search(
-        self, embedding: Embedding, n_results: int = 10, **kwargs
+        self,
+        embedding: Embedding,
+        n_results: int = 10,
+        max_distance: float = 1,
+        **kwargs,
     ) -> list[BaseVectorSearchResult]:
         collection = await self._ensure_collection()
         if isinstance(collection, AsyncCollection):
@@ -55,9 +59,13 @@ class ChromaVectorStore:
             )
 
         assert results["documents"] is not None
+        assert results["distances"] is not None
         return [
             BaseVectorSearchResult(idx=id_, content=document)
-            for id_, document in zip(results["ids"][0], results["documents"][0])
+            for id_, document, distance in zip(
+                results["ids"][0], results["documents"][0], results["distances"][0]
+            )
+            if distance < max_distance
         ]
 
     async def insert(

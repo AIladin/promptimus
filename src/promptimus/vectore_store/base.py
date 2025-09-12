@@ -12,7 +12,7 @@ class BaseVectorSearchResult(BaseModel):
 
 class VectorStoreProtocol(Protocol):
     async def search(
-        self, embedding: Embedding, n_results: int, **kwargs
+        self, embedding: Embedding, n_results: int, max_distance: float, **kwargs
     ) -> list[BaseVectorSearchResult]: ...
 
     async def insert(
