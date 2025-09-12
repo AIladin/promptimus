@@ -1,4 +1,4 @@
-from typing import Hashable, Protocol
+from typing import Protocol
 
 from pydantic import BaseModel
 
@@ -6,16 +6,17 @@ from promptimus.embedders.base import Embedding
 
 
 class BaseVectorSearchResult(BaseModel):
-    idx: Hashable
+    idx: str
     content: str
 
 
 class VectorStoreProtocol(Protocol):
-    async def search(        self, embedding: Embedding, **kwargs
+    async def search(
+        self, embedding: Embedding, n_results: int, **kwargs
     ) -> list[BaseVectorSearchResult]: ...
 
     async def insert(
         self, embedding: Embedding, content: str, *args, **kwargs
-    ) -> Hashable: ...
+    ) -> str: ...
 
-    async def delete(self, idx: Hashable): ...
+    async def delete(self, idx: str): ...
