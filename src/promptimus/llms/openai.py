@@ -1,7 +1,10 @@
 from openai import AsyncOpenAI, RateLimitError
+from openai.types.chat import (
+    ChatCompletionMessageParam,
+)
 
 from promptimus.common.rate_limiting import RateLimitedClient
-from promptimus.dto import History, Message, MessageRole, ToolRequest
+from promptimus.dto import Message, MessageRole, ToolRequest
 
 
 class OpenAILike(RateLimitedClient[Message]):
@@ -21,10 +24,23 @@ class OpenAILike(RateLimitedClient[Message]):
         self._model_name = model_name
         self.call_kwargs = call_kwargs or {}
 
+    def serialize_message(self, message: Message) -> ChatCompletionMessageParam:
+        data = message.model_dump(exclude={"content", "images"})
+
+        data["content"] = [
+            {"type": "text", "text": message.content},
+            *(
+                {"type": "image_url", "image_url": {"url": img.url}}
+                for img in message.images
+            ),
+        ]
+
+        return data  # type: ignore
+
     async def _request(self, history: list[Message], **kwargs) -> Message:
         """Perform one API call and return a Message or raise errors."""
         response = await self.client.chat.completions.create(
-            messages=History.dump_python(history),
+            messages=[self.serialize_message(m) for m in history],
             model=self._model_name,
             **{**self.call_kwargs, **kwargs},
         )

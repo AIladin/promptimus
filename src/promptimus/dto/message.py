@@ -1,7 +1,9 @@
 from enum import StrEnum
-from typing import NamedTuple
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
+
+from .image import ImageContent
+from .tool import ToolRequest
 
 
 class MessageRole(StrEnum):
@@ -11,23 +13,10 @@ class MessageRole(StrEnum):
     TOOL = "tool"
 
 
-class ToolFunction(BaseModel):
-    name: str
-    arguments: str
-
-
-class ToolRequest(BaseModel):
-    id: str | None = None
-    type: str | None = None
-    function: ToolFunction
-
-
-ToolCalls = TypeAdapter(list[ToolRequest])
-
-
 class Message(BaseModel):
     role: MessageRole | str
     content: str
+    images: list[ImageContent] = Field(default_factory=list)
     tool_calls: list[ToolRequest] | None = Field(default=None)
     tool_call_id: str | None = None
 
@@ -38,8 +27,3 @@ class Message(BaseModel):
 
 
 History = TypeAdapter(list[Message])
-
-
-class Sample(NamedTuple):
-    x: list[Message]
-    y: Message
