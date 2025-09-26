@@ -49,7 +49,9 @@ def _wrap_prompt_call(
                 )
 
             if history:
-                span.set_input(History.dump_python(history))
+                span.set_input(
+                    History.dump_python(history, exclude={"__all__": {"images"}})
+                )
                 for i, message in enumerate(history):
                     if message.tool_calls:
                         span.set_attributes(
@@ -106,7 +108,11 @@ def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
                 case [*history_list] if all(
                     isinstance(i, Message) for i in history_list
                 ):
-                    span.set_input(History.dump_python(list(history_list)))
+                    span.set_input(
+                        History.dump_python(
+                            list(history_list), exclude={"__all__": {"images"}}
+                        )
+                    )
                 case Message() as message:
                     span.set_input(message.model_dump())
                 case _:
