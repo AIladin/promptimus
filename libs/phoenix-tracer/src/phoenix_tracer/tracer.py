@@ -114,7 +114,7 @@ def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
                         )
                     )
                 case Message() as message:
-                    span.set_input(message.model_dump())
+                    span.set_input(message.model_dump(exclude={"images"}))
                 case _:
                     span.set_input(str(history))
             result = await fn(history, *args, **kwargs)
