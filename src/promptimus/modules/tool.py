@@ -35,12 +35,14 @@ class Tool(Module, Generic[T]):
         fn: Callable[..., T | Awaitable[T]],
         name: str,
         description: str | None = None,
+        module: Module | None = None,
     ):
         super().__init__()
 
         self.fn = validate_call(fn)
         self.name = name
         self.description = Parameter(description)
+        self.module = module
 
     def __call__(self, *args, **kwargs):
         return self.fn(*args, **kwargs)
@@ -53,12 +55,14 @@ class Tool(Module, Generic[T]):
             result: T = await asyncio.to_thread(self.fn, **input_data)  # type: ignore
         return result
 
-    @classmethod
-    def decorate(cls, fn: Callable[..., T | Awaitable[T]]) -> Self:
+    @staticmethod
+    def build_param_block(fn: Callable[..., T | Awaitable[T]]) -> str:
         sig = signature(fn)
 
         params_desc = []
         for pname, pvalue in sig.parameters.items():
+            if pname in {"self", "cls"}:
+                continue
             params_desc.append(
                 PARAM_TEMPLATE.format(
                     name=pname,
@@ -66,13 +70,34 @@ class Tool(Module, Generic[T]):
                 ).strip()
             )
 
+        return "\n".join(params_desc)
+
+    @classmethod
+    def decorate(cls, fn: Callable[..., T | Awaitable[T]]) -> Self:
         description = DESCRIPTION_TEMPLATE.format(
             name=fn.__name__,
             description=fn.__doc__ if fn.__doc__ is not None else "",
-            param_block="\n".join(params_desc),
+            param_block=cls.build_param_block(fn),
         ).strip()
 
         return cls(fn, fn.__name__, description)
+
+    @classmethod
+    def from_module(
+        cls,
+        module: Module,
+        name: str | None = None,
+        description: str | None = None,
+    ) -> Self:
+        name = name or Module.__name__.lower()
+
+        description = DESCRIPTION_TEMPLATE.format(
+            name=name,
+            description=description or module.__doc__ or "",
+            param_block=cls.build_param_block(module.forward),
+        ).strip()
+
+        return cls(module.forward, name, description, module=module)
 
     def build_model(self) -> type[BaseModel]:
         sig = signature(self.fn)
@@ -182,7 +207,7 @@ class ToolCallingAgent(Module):
 
     def __init__(
         self,
-        tools: list[Tool | Callable],
+        tools: list[Tool | Module | Callable],
         max_steps: int = 5,
         memory_size: int = 20,
         prompt: str | None = None,
@@ -193,11 +218,19 @@ class ToolCallingAgent(Module):
         self.max_steps = max_steps
         self.observation_role = observation_role
 
-        converted_tools: list[Tool] = [
-            tool if isinstance(tool, Tool) else Tool.decorate(tool) for tool in tools
-        ]
+        self.tools = ModuleDict()
 
-        self.tools = ModuleDict(**{tool.name: tool for tool in converted_tools})
+        for obj in tools:
+            match obj:
+                case Tool():
+                    tool = obj
+                case Module():
+                    tool = Tool.from_module(obj)
+                case _:
+                    tool = Tool.decorate(obj)
+
+            self.tools[tool.name] = tool
+
         self.predictor = MemoryModule(
             memory_size, prompt if prompt is not None else DEFAULT_PROMPT
         )
@@ -302,7 +335,7 @@ class OpenaiToolCallingAgent(ToolCallingAgent):
     def __init__(
         self,
         prompt: str,
-        tools: list[Tool | Callable],
+        tools: list[Tool | Module | Callable],
         max_steps: int = 5,
         memory_size: int = 50,
     ):

@@ -129,19 +129,23 @@ class Module(ABC):
     async def forward(self, *_: Any, **__: Any) -> Any: ...
 
 
-T = TypeVar("T", bound=Union[Parameter, Module])
-
-
-class ModuleDict(Module, Generic[T]):
+class ModuleDict(Module):
     """A dict wrapper to handle serialization"""
 
-    def __init__(self, **kwargs: T):
+    def __init__(self, **kwargs: Parameter | Module):
         super().__init__()
 
-        self.objects_map = kwargs
+        self.objects_map = {}
 
-        for k, v in self.objects_map.items():
-            setattr(self, k, v)
+        for k, v in kwargs.items():
+            self[k] = v
+
+    def __setitem__(self, key: str, value: Parameter | Module):
+        assert not hasattr(self, key) and key not in self.objects_map, (
+            f"In module dict key `{key}` already set."
+        )
+        self.objects_map[key] = value
+        setattr(self, key, value)
 
     async def forward(self, *_: Any, **__: Any) -> Any:
         raise NotImplementedError
