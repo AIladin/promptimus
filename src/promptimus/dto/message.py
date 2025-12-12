@@ -19,6 +19,7 @@ class Message(BaseModel):
     images: list[ImageContent] = Field(default_factory=list)
     tool_calls: list[ToolRequest] | None = Field(default=None)
     tool_call_id: str | None = None
+    reasoning: str | None = None
 
     model_config = ConfigDict(extra="ignore")
 

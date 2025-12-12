@@ -58,6 +58,7 @@ class OpenAILike(RateLimitedClient[Message]):
             role=MessageRole.ASSISTANT,
             content=raw.content or "",
             tool_calls=tool_calls,
+            reasoning=raw.reasoning if hasattr(raw, "reasoning") else None,
         )
 
     async def achat(self, history: list[Message], **kwargs) -> Message:

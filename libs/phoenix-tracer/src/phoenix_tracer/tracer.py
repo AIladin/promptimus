@@ -8,7 +8,7 @@ from opentelemetry.trace import Status, StatusCode
 from phoenix.otel import register
 
 from promptimus.core import Module
-from promptimus.dto import History, Message, ToolCalls
+from promptimus.dto import History, Message
 from promptimus.modules import Prompt
 from promptimus.modules.tool import Tool
 
@@ -35,6 +35,9 @@ def _wrap_prompt_call(
             f"{module_path}.{prompt_name}",
             openinference_span_kind="llm",
         ) as span:
+            span.set_attribute(
+                SpanAttributes.METADATA + ".prompt_digest", prompt.digest()
+            )
             span.set_attribute(SpanAttributes.LLM_PROMPT_TEMPLATE, prompt.prompt.value)
             span.set_attribute(
                 SpanAttributes.LLM_PROMPT_TEMPLATE_VARIABLES, json.dumps(kwargs)
@@ -54,40 +57,37 @@ def _wrap_prompt_call(
                 )
                 for i, message in enumerate(history):
                     if message.tool_calls:
-                        span.set_attributes(
-                            {
-                                f"llm.input_messages.{i + 1}.message.role": message.role,
-                                f"llm.input_messages.{i + 1}.message.content": ToolCalls.dump_json(
-                                    message.tool_calls
-                                ),
-                            }
-                        )
-                    else:
-                        span.set_attributes(
-                            {
-                                f"llm.input_messages.{i + 1}.message.role": message.role,
-                                f"llm.input_messages.{i + 1}.message.content": message.content,
-                            }
-                        )
+                        for call in message.tool_calls:
+                            span.set_attributes(
+                                {
+                                    f"llm.input_messages.{i + 1}.message.tool_call": call.model_dump_json(),
+                                }
+                            )
+
+                    span.set_attributes(
+                        {
+                            f"llm.input_messages.{i + 1}.message.role": message.role,
+                            f"llm.input_messages.{i + 1}.message.content": message.content,
+                        }
+                    )
             result = await fn(history, provider_kwargs, **kwargs)
             span.set_output(result.model_dump())
 
             if result.tool_calls:
-                span.set_attributes(
-                    {
-                        "llm.output_messages.0.message.role": result.role,
-                        "llm.output_messages.0.message.content": ToolCalls.dump_json(
-                            result.tool_calls
-                        ),
-                    }
-                )
-            else:
-                span.set_attributes(
-                    {
-                        "llm.output_messages.0.message.role": result.role,
-                        "llm.output_messages.0.message.content": result.content,
-                    }
-                )
+                for call in result.tool_calls:
+                    span.set_attributes(
+                        {
+                            "llm.output_messages.0.message.content": call.model_dump_json()
+                        }
+                    )
+            span.set_attributes(
+                {
+                    "llm.output_messages.0.message.role": result.role,
+                    "llm.output_messages.0.message.content": result.content
+                    or result.reasoning
+                    or "",
+                }
+            )
             span.set_status(Status(StatusCode.OK))
         return result
 
@@ -104,6 +104,10 @@ def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
             module_path,
             openinference_span_kind="chain",
         ) as span:
+            span.set_attribute(
+                SpanAttributes.METADATA + ".module_digest", module.digest()
+            )
+
             match history:
                 case [*history_list] if all(
                     isinstance(i, Message) for i in history_list

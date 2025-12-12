@@ -14,6 +14,8 @@ from .parameters import Parameter
 
 class Module(ABC):
     def __init__(self):
+        self._name: str | None = None
+        self._parent: Module | None = None
         self._parameters: dict[str, Parameter] = {}
         self._submodules: dict[str, "Module"] = {}
         self._embedder: EmbedderProtocol | None = None
@@ -26,9 +28,13 @@ class Module(ABC):
 
         if isinstance(value, Parameter):
             self._parameters[name] = value
-        elif isinstance(value, Module):
+            value._parent = self
+            value._name = name
+        elif isinstance(value, Module) and name != "_parent":
             self._check_module_recursion(value)
             self._submodules[name] = value
+            value._parent = self
+            value._name = name
 
         super().__setattr__(name, value)
 
@@ -38,6 +44,14 @@ class Module(ABC):
 
         for sub in self._submodules.values():
             sub._check_module_recursion(module)
+
+    @property
+    def path(self) -> str:
+        path = self._name or "root"
+        if self._parent:
+            path = self._parent.path + "." + path
+
+        return path
 
     def with_llm(self, llm: LLMProtocol) -> Self:
         self._llm = llm
