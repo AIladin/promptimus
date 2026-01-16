@@ -1,15 +1,16 @@
 repos:
-
-- repo: https://github.com/RobertCraigie/pyright-python
-  rev: v1.1.405
+- repo: local
   hooks:
-  # Run type checker
-  - id: pyright
-    types: [python]
-
+    - id: ty
+      name: run ty check
+      entry: uv run --all-extras ty check .
+      language: python
+      types: [python]
+      exclude: './notebooks/*'
+      
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: v0.12.12
+  rev: v0.14.11
   hooks:
     # Run the linter with import sorting.
     - id: ruff
@@ -17,4 +18,4 @@ repos:
       types: [python]
     # Run the formatter.
     - id: ruff-format
-      types: [python, jupyter]
+      types: [python]

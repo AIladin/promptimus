@@ -1,3 +1,4 @@
+import functools
 import json
 from typing import Any
 
@@ -91,12 +92,11 @@ def _wrap_prompt_call(
             span.set_status(Status(StatusCode.OK))
         return result
 
-    prompt.forward = wrapper
+    prompt.forward = wrapper  # ty:ignore[invalid-assignment]
 
 
 def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
-    fn = module.forward
-
+    @functools.wraps(module.forward)
     async def wrapper(
         history: list[Message] | Message | Any, *args, **kwargs
     ) -> Message:
@@ -121,7 +121,12 @@ def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
                     span.set_input(message.model_dump(exclude={"images"}))
                 case _:
                     span.set_input(str(history))
-            result = await fn(history, *args, **kwargs)
+            try:
+                result = await module.forward(history, *args, **kwargs)
+            except TypeError as e:
+                e.add_note(f"{module.__class__.__name__}:{module.path}")
+                raise e
+
             if isinstance(result, Message):
                 span.set_output(result.model_dump_json())
             else:
@@ -129,17 +134,17 @@ def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
             span.set_status(Status(StatusCode.OK))
         return result
 
-    module.forward = wrapper
-
 
 def _wrap_tool_call(
     tool: Tool,
     tracer: OITracer,
     module_path: str,
 ):
-    fn = tool.forward
-
-    async def wrapper(json_data: str) -> Message:
+    @functools.wraps(tool.forward)
+    async def wrapper(
+        json_data: str,
+        history: list[Message] | Message | str | None = None,
+    ) -> Message:
         with tracer.start_as_current_span(
             f"{module_path}.{tool.name}",
             openinference_span_kind="tool",
@@ -150,12 +155,10 @@ def _wrap_tool_call(
                 description=tool.description.value,
                 parameters=json.loads(json_data),
             )
-            result = await fn(json_data)
+            result = await tool.forward(json_data, history=history)
             span.set_output(result)
             span.set_status(Status(StatusCode.OK))
         return result
-
-    tool.forward = wrapper
 
 
 def _trace_module(module: Module, tracer: OITracer, module_path: str):
@@ -165,8 +168,10 @@ def _trace_module(module: Module, tracer: OITracer, module_path: str):
             _wrap_prompt_call(value, tracer, module_path, key)
 
         elif isinstance(value, Tool):
-            logger.debug(f"Wrapping `{module_path}.{key}`")
+            submodule_path = f"{module_path}.{key}"
+            logger.debug(f"Wrapping `{submodule_path}`")
             _wrap_tool_call(value, tracer, module_path)
+            _trace_module(value, tracer, submodule_path)
 
         elif isinstance(value, Module):
             submodule_path = f"{module_path}.{key}"

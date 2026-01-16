@@ -2,8 +2,9 @@ import asyncio
 import json
 import re
 from collections.abc import Awaitable
+from inspect import Parameter as InspectParameter
 from inspect import iscoroutinefunction, signature
-from typing import Callable, Generic, Self, TypeVar
+from typing import Any, Callable, Generic, Protocol, Self, TypeVar, runtime_checkable
 
 from pydantic import BaseModel, ValidationError, create_model, validate_call
 
@@ -11,10 +12,31 @@ from promptimus import errors
 from promptimus.core import Module, Parameter
 from promptimus.core.module import ModuleDict
 from promptimus.dto import Message, MessageRole
-from promptimus.errors import MaxIterExceeded
+from promptimus.errors import InvalidToolConfig, MaxIterExceeded
 from promptimus.modules.memory import MemoryModule
 
 T = TypeVar("T")
+
+
+@runtime_checkable
+class SupportsHandoff(Protocol):
+    """Protocol for modules that accept conversation history during handoff."""
+
+    async def forward(
+        self, history: list[Message] | Message | str, **kwargs
+    ) -> Message:
+        """
+        Forward method that accepts conversation history.
+
+        Args:
+            history: Conversation History (list of Messages, single Message, or string)
+            **kwargs: Additional parameters specific to the module.
+
+        Returns:
+            Message response from the sub-agent.
+        """
+        ...
+
 
 DESCRIPTION_TEMPLATE = """
 ## `{name}` tool.
@@ -36,33 +58,92 @@ class Tool(Module, Generic[T]):
         name: str,
         description: str | None = None,
         module: Module | None = None,
+        handoff_history: bool = False,
+        handoff_include_tool_loop: bool = False,
     ):
         super().__init__()
+
+        # Validate configuration 1: can't include tool loop without enabling history
+        if handoff_include_tool_loop and not handoff_history:
+            raise InvalidToolConfig(
+                f"Tool '{name}' configured with handoff_include_tool_loop=True, but "
+                f"handoff_history=False. To include tool loop messages, you must enable "
+                f"history passing by setting handoff_history=True."
+            )
+
+        # Validate configuration 2: can't enable history if module doesn't support protocol
+        if (
+            handoff_history
+            and module is not None
+            and not isinstance(module, SupportsHandoff)
+        ):
+            raise InvalidToolConfig(
+                f"Tool '{name}' configured with handoff_history=True, but its module "
+                f"does not implement SupportsHandoff protocol. Either set handoff_history=False "
+                f"or implement the protocol in the module's forward() method."
+            )
 
         self.fn = validate_call(fn)
         self.name = name
         self.description = Parameter(description)
         self.module = module
+        self.handoff_history = handoff_history
+        self.handoff_include_tool_loop = handoff_include_tool_loop
 
     def __call__(self, *args, **kwargs):
         return self.fn(*args, **kwargs)
 
-    async def forward(self, json_data: str) -> T:
+    @property
+    def supports_handoff(self) -> bool:
+        """
+        Check if this tool supports history handoff.
+
+        Returns:
+            True if handoff_history is enabled, False otherwise
+        """
+        return self.handoff_history
+
+    async def forward(
+        self, json_data: str, history: list[Message] | Message | str | None = None
+    ) -> T:
+        """
+        Execute tool with optional conversation history.
+
+        Args:
+            json_data: JSON string with tool parameters
+            history: Optional conversation history to pass to sub-agents
+
+        Returns:
+            Result from the tool function
+        """
         input_data = json.loads(json_data)
+
+        # Pass history as first positional argument if handoff is enabled
         if iscoroutinefunction(self.fn):
-            result = await self.fn(**input_data)
+            if self.handoff_history and history is not None:
+                result = await self.fn(history, **input_data)
+            else:
+                result = await self.fn(**input_data)
         else:
-            result: T = await asyncio.to_thread(self.fn, **input_data)  # type: ignore
+            if self.handoff_history and history is not None:
+                result: T = await asyncio.to_thread(self.fn, history, **input_data)  # type: ignore
+            else:
+                result: T = await asyncio.to_thread(self.fn, **input_data)  # type: ignore
         return result
 
-    @staticmethod
-    def build_param_block(fn: Callable[..., T | Awaitable[T]]) -> str:
+    def build_param_block(
+        fn: Callable[..., T | Awaitable[T]], handoff_history: bool = False
+    ) -> str:
         sig = signature(fn)
 
         params_desc = []
         for pname, pvalue in sig.parameters.items():
             if pname in {"self", "cls"}:
                 continue
+
+            if pname == "history" and handoff_history:
+                continue
+
             params_desc.append(
                 PARAM_TEMPLATE.format(
                     name=pname,
@@ -72,15 +153,16 @@ class Tool(Module, Generic[T]):
 
         return "\n".join(params_desc)
 
+    # TODO add ags to decorator
     @classmethod
     def decorate(cls, fn: Callable[..., T | Awaitable[T]]) -> Self:
         description = DESCRIPTION_TEMPLATE.format(
-            name=fn.__name__,
+            name=fn.__name__,  # ty:ignore[unresolved-attribute]
             description=fn.__doc__ if fn.__doc__ is not None else "",
-            param_block=cls.build_param_block(fn),
+            param_block=cls.build_param_block(fn, False),
         ).strip()
 
-        return cls(fn, fn.__name__, description)
+        return cls(fn, fn.__name__, description)  # ty:ignore[unresolved-attribute]
 
     @classmethod
     def from_module(
@@ -88,28 +170,55 @@ class Tool(Module, Generic[T]):
         module: Module,
         name: str | None = None,
         description: str | None = None,
+        handoff_history: bool = False,
+        handoff_include_tool_loop: bool = False,
     ) -> Self:
         name = name or Module.__name__.lower()
 
         description = DESCRIPTION_TEMPLATE.format(
             name=name,
             description=description or module.__doc__ or "",
-            param_block=cls.build_param_block(module.forward),
+            param_block=cls.build_param_block(
+                module.forward, handoff_history=handoff_history
+            ),
         ).strip()
 
-        return cls(module.forward, name, description, module=module)
+        return cls(
+            module.forward,
+            name,
+            description,
+            module=module,
+            handoff_history=handoff_history,
+            handoff_include_tool_loop=handoff_include_tool_loop,
+        )
 
     def build_model(self) -> type[BaseModel]:
         sig = signature(self.fn)
 
         fields = {}
         for pname, pvalue in sig.parameters.items():
-            fields[pname] = (pvalue.annotation, pvalue.default)
+            # Skip history parameter when handoff is enabled
+            if pname == "history" and self.handoff_history:
+                continue
 
-        return create_model(self.fn.__name__, **fields)
+            # Handle annotation: convert empty to Any
+            annotation = (
+                pvalue.annotation
+                if pvalue.annotation != InspectParameter.empty
+                else Any
+            )
+
+            # Handle default: convert empty to ... (required field)
+            default = (
+                pvalue.default if pvalue.default != InspectParameter.empty else ...
+            )
+
+            fields[pname] = (annotation, default)
+
+        return create_model(self.fn.__name__, **fields)  # ty:ignore[possibly-missing-attribute]
 
     def to_openai_function(self) -> dict:
-        schema = self.build_model().schema()
+        schema = self.build_model().model_json_schema()
         return {
             "type": "function",
             "function": {
@@ -222,8 +331,8 @@ class ToolCallingAgent(Module):
 
         for obj in tools:
             match obj:
-                case Tool():
-                    tool = obj
+                case Tool() as tool:
+                    pass
                 case Module():
                     tool = Tool.from_module(obj)
                 case _:
@@ -246,11 +355,21 @@ class ToolCallingAgent(Module):
         return str([tool.name for tool in self.tools.objects_map.values()])
 
     async def forward(
-        self, request: list[Message] | Message | str, **kwargs
+        self, history: list[Message] | Message | str, **kwargs
     ) -> Message:
+        """
+        Execute tool-calling agent loop with conversation history.
+
+        Args:
+            history: Conversation History (list of Messages, single Message, or string)
+            **kwargs: Additional parameters for predictor
+
+        Returns:
+            Final response message
+        """
         for step in range(self.max_steps):
             response = await self.predictor.forward(
-                request,
+                history,
                 tool_desc=self.tool_desc,
                 tool_names=self.tool_names,
                 **kwargs,
@@ -285,8 +404,29 @@ class ToolCallingAgent(Module):
 
                 # check if parameters is valid & execute tool
                 try:
+                    # Prepare history for handoff if tool supports it
+                    tool_history = None
+                    if tool.supports_handoff:
+                        # Get current conversation history from internal memory
+                        current_history = self.predictor.memory.as_list()
+
+                        # Filter history based on handoff_include_tool_loop
+                        if tool.handoff_include_tool_loop:
+                            tool_history = current_history
+                        else:
+                            # Filter out tool loop messages (observations and assistant tool calls)
+                            tool_history = [
+                                msg
+                                for msg in current_history
+                                if msg.role != self.observation_role
+                                and not (
+                                    msg.role == MessageRole.ASSISTANT and msg.tool_calls
+                                )
+                            ]
+
                     tool_response = await tool.forward(
-                        match.group("action_input").strip("`'\" \n")
+                        match.group("action_input").strip("`'\" \n"),
+                        history=tool_history,
                     )
                 except (ValidationError, json.JSONDecodeError) as e:
                     # invalid params case
@@ -323,7 +463,7 @@ class ToolCallingAgent(Module):
                 )
             else:
                 # invalid user response
-                request = Message(
+                history = Message(
                     role=self.observation_role,
                     content=self.INVALID_FORMAT_MESSAGE,
                 )
@@ -342,11 +482,21 @@ class OpenaiToolCallingAgent(ToolCallingAgent):
         super().__init__(tools, max_steps, memory_size, prompt, MessageRole.TOOL)
 
     async def forward(
-        self, request: list[Message] | Message | str, **kwargs
+        self, history: list[Message] | Message | str, **kwargs
     ) -> Message:
+        """
+        Execute OpenAI tool-calling agent loop with conversation history.
+
+        Args:
+            history: Conversation History (list of Messages, single Message, or string)
+            **kwargs: Additional parameters for predictor
+
+        Returns:
+            Final response message
+        """
         for step in range(self.max_steps):
             response = await self.predictor.forward(
-                request,
+                history,
                 provider_kwargs={
                     "tools": [
                         tool.to_openai_function()
@@ -369,13 +519,35 @@ class OpenaiToolCallingAgent(ToolCallingAgent):
                             f"{tool_request.function.name}, expected one of {self.tool_names}"
                         )
 
-                    tool_future = tool.forward(tool_request.function.arguments)
+                    # Prepare history for handoff if tool supports it
+                    tool_history = None
+                    if tool.supports_handoff:
+                        # Get current conversation history from internal memory
+                        current_history = self.predictor.memory.as_list()
+
+                        # Filter history based on handoff_include_tool_loop
+                        if tool.handoff_include_tool_loop:
+                            tool_history = current_history
+                        else:
+                            # Filter out tool loop messages (observations and assistant tool calls)
+                            tool_history = [
+                                msg
+                                for msg in current_history
+                                if msg.role != self.observation_role
+                                and not (
+                                    msg.role == MessageRole.ASSISTANT and msg.tool_calls
+                                )
+                            ]
+
+                    tool_future = tool.forward(
+                        tool_request.function.arguments, history=tool_history
+                    )
                     futures.append(tool_future)
 
                 # valid tool output
                 tool_results = await asyncio.gather(*futures, return_exceptions=True)
 
-                request = [
+                history = [
                     Message(
                         role=self.observation_role,
                         content=str(tool_result),

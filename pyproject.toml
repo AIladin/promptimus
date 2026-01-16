@@ -48,6 +48,9 @@ dev = [
 venvPath = "."
 venv = ".venv"
 
+[tool.ty.src]
+exclude = ["**/*.ipynb"] 
+
 [tool.uv.workspace]
 members = [
     "libs/*",
@@ -56,3 +59,4 @@ members = [
 [tool.uv.sources]
 promptimus-phoenix-tracer = { workspace = true }
 promptimus-chromadb-store = { workspace = true }
+
