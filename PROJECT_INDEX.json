@@ -1,0 +1,194 @@
+{
+  "project": {
+    "name": "promptimus",
+    "version": "0.1.11",
+    "description": "A PyTorch-like API for building composable LLM agents",
+    "author": "ailadin",
+    "email": "korzhukandrew@gmail.com",
+    "license": "MIT",
+    "python_version": ">=3.12",
+    "repository": "https://github.com/AIladin/promptimus",
+    "generated": "2026-01-14"
+  },
+  "structure": {
+    "src": "src/promptimus/",
+    "tests": "tests/",
+    "docs": "notebooks/",
+    "libs": "libs/",
+    "config": [
+      "pyproject.toml",
+      ".pre-commit-config.yaml",
+      "AGENTS.md"
+    ]
+  },
+  "entry_points": {
+    "main": "src/promptimus/__init__.py",
+    "cli": null,
+    "tests": "tests/test_chekpointing.py",
+    "notebooks": "notebooks/"
+  },
+  "core_modules": {
+    "core": {
+      "path": "src/promptimus/core/",
+      "exports": ["Module", "Parameter"],
+      "files": ["module.py", "parameters.py", "checkpointing.py"],
+      "purpose": "Foundation for composable agent architecture"
+    },
+    "dto": {
+      "path": "src/promptimus/dto/",
+      "exports": ["Message", "MessageRole", "ImageContent", "Tool"],
+      "files": ["message.py", "tool.py", "image.py"],
+      "purpose": "Standardized data structures for LLM interactions"
+    },
+    "llms": {
+      "path": "src/promptimus/llms/",
+      "exports": ["OpenAILike", "OllamaLLM", "DummyLLM"],
+      "files": ["base.py", "openai.py", "ollama.py", "dummy.py"],
+      "purpose": "LLM provider abstraction layer"
+    },
+    "embedders": {
+      "path": "src/promptimus/embedders/",
+      "exports": ["OpenAILikeEmbedder", "BaseEmbedder"],
+      "files": ["base.py", "openai.py", "ops.py"],
+      "purpose": "Text embedding generation with batch processing"
+    },
+    "modules": {
+      "path": "src/promptimus/modules/",
+      "exports": [
+        "Prompt",
+        "MemoryModule",
+        "RetrievalModule",
+        "RAGModule",
+        "StructuralOutput",
+        "Tool",
+        "ToolCallingAgent",
+        "OpenaiToolCallingAgent"
+      ],
+      "files": [
+        "prompt.py",
+        "memory.py",
+        "retrieval.py",
+        "rag.py",
+        "structural.py",
+        "tool.py"
+      ],
+      "purpose": "Ready-to-use building blocks for agent construction"
+    },
+    "vectore_store": {
+      "path": "src/promptimus/vectore_store/",
+      "exports": ["VectorStore"],
+      "files": ["base.py"],
+      "purpose": "Vector database interface abstraction"
+    },
+    "common": {
+      "path": "src/promptimus/common/",
+      "exports": ["rate_limiting"],
+      "files": ["rate_limiting.py"],
+      "purpose": "Shared helper functionality"
+    },
+    "errors": {
+      "path": "src/promptimus/",
+      "exports": ["Custom exception classes"],
+      "files": ["errors.py"],
+      "purpose": "Error handling"
+    }
+  },
+  "plugins": {
+    "phoenix-tracer": {
+      "package": "promptimus-phoenix-tracer",
+      "version": "0.1.4",
+      "path": "libs/phoenix-tracer/",
+      "purpose": "Arize Phoenix tracing and observability",
+      "install": "pip install promptimus[phoenix]",
+      "dependencies": ["arize-phoenix>=8.20.0"]
+    },
+    "chromadb-store": {
+      "package": "promptimus-chromadb-store",
+      "version": "0.1.4",
+      "path": "libs/chromadb-store/",
+      "purpose": "ChromaDB vector store for RAG",
+      "install": "pip install promptimus[chromadb]",
+      "dependencies": ["chromadb>=1.0.15"]
+    }
+  },
+  "dependencies": {
+    "core": [
+      "openai>=1.58.1",
+      "pydantic>=2.10.4",
+      "loguru>=0.7.3",
+      "tomlkit>=0.13.2"
+    ],
+    "testing": [
+      "pytest>=8.3.4",
+      "pytest-asyncio>=0.25.0"
+    ],
+    "dev": [
+      "ipykernel>=6.29.5",
+      "ipywidgets>=8.1.5",
+      "pre-commit>=4.2.0",
+      "rich>=13.9.4"
+    ],
+    "optional": {
+      "phoenix": ["promptimus-phoenix-tracer"],
+      "chromadb": ["promptimus-chromadb-store"]
+    }
+  },
+  "documentation": {
+    "readme": "README.md",
+    "agents_guide": "AGENTS.md",
+    "tutorials": [
+      {
+        "name": "step_1_llm_provider.ipynb",
+        "topic": "LLM providers and embedders"
+      },
+      {
+        "name": "step_2_prompts_and_modules.ipynb",
+        "topic": "Core architecture concepts"
+      },
+      {
+        "name": "step_3_prebuit_modules.ipynb",
+        "topic": "Pre-built modules (Memory, RAG, Retrieval)"
+      },
+      {
+        "name": "step_4_custom_agent.ipynb",
+        "topic": "Tool calling and custom agents"
+      },
+      {
+        "name": "step_5_tracing.ipynb",
+        "topic": "Phoenix observability integration"
+      }
+    ]
+  },
+  "testing": {
+    "framework": "pytest",
+    "test_files": 1,
+    "test_lines": 188,
+    "focus": "Serialization and checkpointing functionality"
+  },
+  "features": [
+    "PyTorch-like Module system",
+    "Async-first API design",
+    "Tool calling with schema generation",
+    "Structured output via Pydantic",
+    "Conversation memory management",
+    "RAG with vector stores",
+    "Phoenix tracing integration",
+    "TOML serialization",
+    "OpenAI and Ollama providers"
+  ],
+  "build_commands": {
+    "install": "uv sync",
+    "test": "uv run pytest",
+    "type_check": "uv run ty check",
+    "lint": "uv run ruff check --fix && uv run ruff format",
+    "pre_commit": "pre-commit run --all-files",
+    "build": "uv build"
+  },
+  "stats": {
+    "core_modules": 8,
+    "prebuilt_components": 8,
+    "plugin_packages": 2,
+    "tutorial_notebooks": 5,
+    "test_files": 1
+  }
+}

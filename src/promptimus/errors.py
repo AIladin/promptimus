@@ -26,3 +26,9 @@ class ProviderRetryExceded(PromptimusError): ...
 
 
 class RecursiveModule(PromptimusError): ...
+
+
+class InvalidToolConfig(PromptimusError):
+    """Raised when a tool is configured with incompatible parameters."""
+
+    ...

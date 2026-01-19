@@ -1,7 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from hashlib import md5
-from typing import Any, Generic, Self, TypeVar, Union
+from typing import Any, Self
 
 from promptimus import errors
 from promptimus.embedders import EmbedderProtocol
@@ -39,11 +39,28 @@ class Module(ABC):
         super().__setattr__(name, value)
 
     def _check_module_recursion(self, module: "Module"):
-        if self is module:
-            raise errors.RecursiveModule()
+        """Check if adding this module would create a circular dependency.
 
-        for sub in self._submodules.values():
-            sub._check_module_recursion(module)
+        Only checks the ancestry chain (parent -> grandparent -> ...) to detect
+        circular references like A -> B -> A. Allows the same module instance
+        to be used in different branches (diamond pattern).
+
+        Args:
+            module: The module being added as a submodule
+
+        Raises:
+            RecursiveModule: If the module is already an ancestor of self
+        """
+        # Check if the module being added is anywhere in our ancestry chain
+        current = self
+        while current is not None:
+            if current is module:
+                raise errors.RecursiveModule(
+                    f"Circular dependency detected: cannot add "
+                    f"{module.__class__.__name__}:{module._name} as it's already "
+                    f"an ancestor of {self.__class__.__name__}:{self._name}"
+                )
+            current = current._parent
 
     @property
     def path(self) -> str:

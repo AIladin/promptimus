@@ -35,7 +35,7 @@ class OpenAILike(RateLimitedClient[Message]):
             ),
         ]
 
-        return data  # type: ignore
+        return data
 
     async def _request(self, history: list[Message], **kwargs) -> Message:
         """Perform one API call and return a Message or raise errors."""
