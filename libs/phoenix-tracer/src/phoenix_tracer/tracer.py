@@ -96,7 +96,8 @@ def _wrap_prompt_call(
 
 
 def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
-    @functools.wraps(module.forward)
+    fn = module.forward
+
     async def wrapper(
         history: list[Message] | Message | Any, *args, **kwargs
     ) -> Message:
@@ -122,7 +123,7 @@ def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
                 case _:
                     span.set_input(str(history))
             try:
-                result = await module.forward(history, *args, **kwargs)
+                result = await fn(history, *args, **kwargs)
             except TypeError as e:
                 e.add_note(f"{module.__class__.__name__}:{module.path}")
                 raise e
@@ -134,13 +135,16 @@ def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
             span.set_status(Status(StatusCode.OK))
         return result
 
+    module.forward = wrapper  # ty:ignore[invalid-assignment]
+
 
 def _wrap_tool_call(
     tool: Tool,
     tracer: OITracer,
     module_path: str,
 ):
-    @functools.wraps(tool.forward)
+    fn = tool.forward
+
     async def wrapper(
         json_data: str,
         history: list[Message] | Message | str | None = None,
@@ -155,10 +159,12 @@ def _wrap_tool_call(
                 description=tool.description.value,
                 parameters=json.loads(json_data),
             )
-            result = await tool.forward(json_data, history=history)
+            result = await fn(json_data, history=history)
             span.set_output(result)
             span.set_status(Status(StatusCode.OK))
         return result
+
+    tool.forward = wrapper  # ty:ignore[invalid-assignment]
 
 
 def _trace_module(module: Module, tracer: OITracer, module_path: str):
