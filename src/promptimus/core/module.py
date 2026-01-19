@@ -1,7 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from hashlib import md5
-from typing import Any, Generic, Self, TypeVar, Union
+from typing import Any, Self
 
 from promptimus import errors
 from promptimus.embedders import EmbedderProtocol

@@ -1,4 +1,5 @@
 from .memory import MemoryModule as MemoryModule
+from .memory import ResetMemoryContext as ResetMemoryContext
 from .prompt import Prompt as Prompt
 from .rag import RAGModule as RAGModule
 from .retrieval import RetrievalModule as RetrievalModule

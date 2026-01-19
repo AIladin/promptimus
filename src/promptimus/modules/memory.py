@@ -1,5 +1,6 @@
 from collections import deque
-from typing import Self
+from contextlib import contextmanager
+from typing import Iterator, Self
 
 from promptimus.core import Module
 from promptimus.dto import Message, MessageRole
@@ -85,3 +86,69 @@ class MemoryModule(Module):
     def replace_last(self, message: Message):
         self.memory.replace_last(message)
         return self
+
+
+class ResetMemoryContext:
+    """
+    Context manager that eagerly finds and resets all MemoryModule instances
+    in provided module hierarchies.
+
+    Performs BFS traversal to find ALL MemoryModule instances at any nesting
+    depth. Clears memories on both context entry and exit.
+
+    This class is typically not instantiated directly. Use the reset_memory()
+    function instead.
+    """
+
+    def __init__(self, *modules: Module):
+        if not modules:
+            raise ValueError("At least one module must be provided to reset_memory()")
+        self._root_modules = modules
+        self._memory_modules = self._collect_memory_modules()
+
+    def _collect_memory_modules(self) -> list["MemoryModule"]:
+        """
+        Collect all MemoryModule instances from module hierarchies via BFS traversal.
+
+        Args:
+            root_modules: One or more root Module instances to traverse
+
+        Returns:
+            List of all MemoryModule instances found in the hierarchies
+        """
+        memory_modules = []
+        visited = set()
+        queue = deque(self._root_modules)
+
+        while queue:
+            module = queue.popleft()
+
+            # Skip if already visited (handles diamond patterns)
+            module_id = id(module)
+            if module_id in visited:
+                continue
+            visited.add(module_id)
+
+            # Register if MemoryModule
+            if isinstance(module, MemoryModule):
+                memory_modules.append(module)
+
+            # Add all submodules to queue
+            queue.extend(module._submodules.values())
+
+        return memory_modules
+
+    def __enter__(self) -> Self:
+        """Traverse hierarchy, register memories, clear on entry."""
+        self.reset()  # Clear on entry
+        return self
+
+    def __exit__(self, *args, **kwargs) -> None:
+        """Clear all registered memories on exit."""
+        self.reset()  # Clear on exit
+        return None
+
+    def reset(self) -> None:
+        """Clear all registered MemoryModule instances."""
+        for memory_module in self._memory_modules:
+            memory_module.memory.reset()

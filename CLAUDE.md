@@ -84,6 +84,7 @@ The `__setattr__` override automatically:
 - Wraps `Memory` class (deque-based circular buffer)
 - Extends history with new messages, calls `Prompt.forward()`, stores response
 - Provides `add_message()`, `extend()`, `drop_last()`, `replace_last()` for manipulation
+- Includes `ResetMemoryContext` class for automatic memory clearing (see Memory Context Manager section below)
 
 **Tool** (`tool.py`): Function-to-tool converter
 - `@Tool.decorate` decorator auto-generates descriptions from docstrings and signatures
@@ -124,6 +125,102 @@ The `__setattr__` override automatically:
 **VectorStoreProtocol** (`src/promptimus/vectore_store/base.py`):
 - `async insert()`, `async search()`, `async delete()`, `async update()`
 - External implementation: `ChromaVectorStore` in `libs/chromadb-store/`
+
+### Memory Context Manager
+
+The `ResetMemoryContext` class provides automatic memory clearing for MemoryModule instances. This is particularly useful for agent handoff scenarios where sub-agents are used as tools with history passthrough.
+
+**Basic usage:**
+
+```python
+from promptimus.modules import ResetMemoryContext
+
+# Single module
+with ResetMemoryContext(agent):
+    response = await agent.forward(query)
+# All memories cleared on entry and exit
+
+# Multiple modules
+with ResetMemoryContext(agent1, agent2):
+    await agent1.forward(query1)
+    await agent2.forward(query2)
+# All memories in both hierarchies cleared
+```
+
+**How it works:**
+- Performs BFS traversal on instantiation to find ALL MemoryModule instances in the hierarchy
+- Clears all found memories on context entry (clean slate)
+- Clears all found memories on context exit (cleanup)
+- Handles nested agents, diamond patterns, and ModuleDict collections
+- Raises `ValueError` if no modules are provided
+
+**Key feature: Eager Registration**
+
+`ResetMemoryContext` uses eager registration via BFS traversal to find ALL MemoryModule instances in the module hierarchy upfront:
+
+```python
+class ParentModule(Module):
+    def __init__(self):
+        super().__init__()
+        self.agent1 = MemoryModule(...)
+        self.agent2 = MemoryModule(...)
+
+parent = ParentModule()
+
+with ResetMemoryContext(parent):
+    # Both agent1 and agent2 memories cleared, even if only agent1 is used
+    await parent.agent1.forward(query)
+```
+
+This ensures complete cleanup of all conversation state in the hierarchy.
+
+**Manual control:**
+
+```python
+with ResetMemoryContext(agent) as ctx:
+    await agent.forward(query1)
+    ctx.reset()  # Manual clear mid-execution
+    await agent.forward(query2)
+```
+
+The context manager provides a `reset()` method for manual control during execution.
+
+**Multiple module support:**
+
+```python
+# Clear multiple independent module hierarchies
+with ResetMemoryContext(agent1, agent2, agent3):
+    await agent1.forward(query1)
+    await agent2.forward(query2)
+```
+
+**Nested agents with tools:**
+
+```python
+main_agent = ToolCallingAgent([
+    Tool.from_module(sub_agent, handoff_history=True)
+])
+with ResetMemoryContext(main_agent):
+    await main_agent.forward(query)
+# Both main_agent and sub_agent memories cleared
+```
+
+**Use cases:**
+- Fresh conversation contexts (isolate user sessions)
+- Testing with isolated state (prevent test interference)
+- Multi-session handling (reset between sessions)
+- Preventing memory leaks in long-running agents
+- Nested agent handoff (clear sub-agent memories after tool calls)
+- Clearing complex agent hierarchies (RAG, ToolCalling, multi-agent systems)
+
+**Implementation details:**
+- Uses BFS traversal to find all MemoryModule instances at any depth
+- Handles diamond patterns (same module in multiple branches) without duplicates
+- Clears on both entry and exit for complete state management
+- Exception-safe: clears memory even if agent raises exception
+- Supports multiple root modules via varargs (`*modules`)
+- Implementation in `src/promptimus/modules/memory.py:91-155`
+- Tests in `tests/test_memory_reset.py`
 
 ### Workspace Structure
 
