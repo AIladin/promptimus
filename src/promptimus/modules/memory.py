@@ -1,6 +1,5 @@
 from collections import deque
-from contextlib import contextmanager
-from typing import Iterator, Self
+from typing import Self
 
 from promptimus.core import Module
 from promptimus.dto import Message, MessageRole

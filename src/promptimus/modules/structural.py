@@ -84,7 +84,7 @@ class StructuralOutput(Module, Generic[T]):
         assert n_retries >= 0
         self.n_retries = n_retries
 
-    async def forward(self, request: list[Message] | Message | str, **kwargs) -> T:
+    async def forward(self, history: list[Message] | Message | str, **kwargs) -> T:
         if not self.native:
             kwargs["schema_description"] = self.model_json_schema.value
             provider_kwargs = {}
@@ -102,7 +102,7 @@ class StructuralOutput(Module, Generic[T]):
         with self.predictor.memory:
             for _ in range(self.n_retries):
                 response = await self.predictor.forward(
-                    request,
+                    history,
                     provider_kwargs=provider_kwargs,
                     **kwargs,
                 )
@@ -114,7 +114,7 @@ class StructuralOutput(Module, Generic[T]):
                     return structured_response
 
                 except ValidationError as e:
-                    request = Message(
+                    history = Message(
                         role=self.retry_message_role,
                         content=self.retry_template.value.format(error_message=str(e)),
                     )
