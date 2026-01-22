@@ -1,6 +1,6 @@
 [project]
 name = "promptimus-chromadb-store"
-version = "0.1.4"
+version = "0.1.5"
 description = "A plugin with chromadb vector store for promptimus."
 readme = "README.md"
 authors = [

@@ -147,7 +147,7 @@ class Tool(Module, Generic[T]):
             params_desc.append(
                 PARAM_TEMPLATE.format(
                     name=pname,
-                    p_type=pvalue.annotation.__name__,
+                    p_type=str(pvalue.annotation),
                 ).strip()
             )
 

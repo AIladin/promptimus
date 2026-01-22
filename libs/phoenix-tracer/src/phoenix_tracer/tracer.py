@@ -57,10 +57,10 @@ def _wrap_prompt_call(
                 )
                 for i, message in enumerate(history):
                     if message.tool_calls:
-                        for call in message.tool_calls:
+                        for j, call in enumerate(message.tool_calls):
                             span.set_attributes(
                                 {
-                                    f"llm.input_messages.{i + 1}.message.tool_call": call.model_dump_json(),
+                                    f"llm.input_messages.{i + 1}.message.tool_call.{j + 1}": call.model_dump_json(),
                                 }
                             )
 
@@ -77,7 +77,8 @@ def _wrap_prompt_call(
                 for call in result.tool_calls:
                     span.set_attributes(
                         {
-                            "llm.output_messages.0.message.content": call.model_dump_json()
+                            "llm.output_messages.0.message.role": result.role,
+                            "llm.output_messages.0.message.content": call.model_dump_json(),
                         }
                     )
             span.set_attributes(
