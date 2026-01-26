@@ -99,7 +99,7 @@ def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
     fn = module.forward
 
     async def wrapper(
-        history: list[Message] | Message | Any, *args, **kwargs
+        history: list[Message] | Message | Any | None = None, *args, **kwargs
     ) -> Message:
         with tracer.start_as_current_span(
             module_path,
@@ -123,7 +123,10 @@ def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
                 case _:
                     span.set_input(str(history))
             try:
-                result = await fn(history, *args, **kwargs)
+                if history:
+                    result = await fn(history, *args, **kwargs)
+                else:
+                    result = await fn(*args, **kwargs)
             except TypeError as e:
                 e.add_note(f"{module.__class__.__name__}:{module.path}")
                 raise e

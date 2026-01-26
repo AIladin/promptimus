@@ -471,19 +471,24 @@ class ToolCallingAgent(Module):
         raise MaxIterExceeded()
 
 
-class OpenaiToolCallingAgent(ToolCallingAgent):
+M = TypeVar("M", bound=BaseModel)
+
+
+class OpenaiToolCallingAgent(ToolCallingAgent, Generic[M]):
     def __init__(
         self,
         prompt: str,
         tools: list[Tool | Module | Callable],
         max_steps: int = 5,
         memory_size: int = 50,
+        structural_output: type[M] | None = None,
     ):
         super().__init__(tools, max_steps, memory_size, prompt, MessageRole.TOOL)
+        self.structural_output_model = structural_output
 
     async def forward(
         self, history: list[Message] | Message | str, **kwargs
-    ) -> Message:
+    ) -> Message | M:  # ty:ignore[invalid-method-override]
         """
         Execute OpenAI tool-calling agent loop with conversation history.
 
@@ -494,6 +499,26 @@ class OpenaiToolCallingAgent(ToolCallingAgent):
         Returns:
             Final response message
         """
+
+        provider_kwargs = {
+            "tools": [
+                tool.to_openai_function() for tool in self.tools.objects_map.values()
+            ]
+        }
+
+        if self.structural_output_model is not None:
+            provider_kwargs.update(
+                {
+                    "response_format": {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": self.structural_output_model.__name__,
+                            "schema": self.structural_output_model.model_json_schema(),
+                        },
+                    }
+                }
+            )
+
         for step in range(self.max_steps):
             response = await self.predictor.forward(
                 history,
@@ -560,6 +585,21 @@ class OpenaiToolCallingAgent(ToolCallingAgent):
 
             # USER response path
             else:
+                if self.structural_output_model is not None:
+                    try:
+                        structured_response = (
+                            self.structural_output_model.model_validate_json(
+                                response.content.strip("\n `").removeprefix("json")
+                            )
+                        )
+                        return structured_response
+
+                    except ValidationError as e:
+                        history = Message(
+                            role=MessageRole.USER,
+                            content=str(e),
+                        )
+
                 # valid user response
                 return Message(
                     role=MessageRole.ASSISTANT,

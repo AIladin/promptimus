@@ -1,6 +1,6 @@
 [project]
 name = "promptimus-phoenix-tracer"
-version = "0.1.6"
+version = "0.1.7"
 description = "A plugin with arize-phoenix tracing for promptimus."
 readme = "README.md"
 authors = [
