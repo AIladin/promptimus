@@ -1507,7 +1507,7 @@ wheels = [
 
 [[package]]
 name = "promptimus"
-version = "0.1.15"
+version = "0.1.16"
 source = { editable = "." }
 dependencies = [
     { name = "loguru" },
@@ -1570,7 +1570,7 @@ requires-dist = [{ name = "chromadb", specifier = ">=1.0.15" }]
 
 [[package]]
 name = "promptimus-phoenix-tracer"
-version = "0.1.7"
+version = "0.1.8"
 source = { editable = "libs/phoenix-tracer" }
 dependencies = [
     { name = "arize-phoenix-otel" },

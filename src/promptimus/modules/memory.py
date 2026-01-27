@@ -46,7 +46,8 @@ class Memory:
 class MemoryModule(Module):
     def __init__(
         self,
-        memory_size: int,
+        memory_size: int = 10,
+        shared_memory: Memory | None = None,
         system_prompt: str | None = None,
         new_message_role: MessageRole | str = MessageRole.USER,
     ):
@@ -54,7 +55,10 @@ class MemoryModule(Module):
 
         self.new_message_role = new_message_role
         self.prompt = Prompt(system_prompt)
-        self.memory = Memory(memory_size)
+        if shared_memory is not None:
+            self.memory = shared_memory
+        else:
+            self.memory = Memory(memory_size)
 
     async def forward(
         self, history: list[Message] | Message | str, **kwargs

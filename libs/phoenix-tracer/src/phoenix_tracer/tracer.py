@@ -123,7 +123,7 @@ def _wrap_module_call(module: Module, tracer: OITracer, module_path: str):
                 case _:
                     span.set_input(str(history))
             try:
-                if history:
+                if history is not None:
                     result = await fn(history, *args, **kwargs)
                 else:
                     result = await fn(*args, **kwargs)

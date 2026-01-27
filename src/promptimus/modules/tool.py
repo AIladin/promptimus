@@ -13,7 +13,7 @@ from promptimus.core import Module, Parameter
 from promptimus.core.module import ModuleDict
 from promptimus.dto import Message, MessageRole
 from promptimus.errors import InvalidToolConfig, MaxIterExceeded
-from promptimus.modules.memory import MemoryModule
+from promptimus.modules.memory import Memory, MemoryModule
 
 T = TypeVar("T")
 
@@ -321,6 +321,7 @@ class ToolCallingAgent(Module):
         memory_size: int = 20,
         prompt: str | None = None,
         observation_role: MessageRole = MessageRole.TOOL,
+        shared_memory: Memory | None = None,
     ):
         super().__init__()
 
@@ -341,7 +342,9 @@ class ToolCallingAgent(Module):
             self.tools[tool.name] = tool
 
         self.predictor = MemoryModule(
-            memory_size, prompt if prompt is not None else DEFAULT_PROMPT
+            system_prompt=prompt if prompt is not None else DEFAULT_PROMPT,
+            memory_size=memory_size,
+            shared_memory=shared_memory,
         )
 
     @property
@@ -394,7 +397,7 @@ class ToolCallingAgent(Module):
                 # check if tool name is valid
                 tool = self.tools.objects_map.get(tool_name)
                 if tool is None:
-                    request = Message(
+                    history = Message(
                         role=self.observation_role,
                         content=self.INVALID_TOOL_NAME_MESSAGE.format(
                             name=tool_name, tool_names=self.tool_names
@@ -430,7 +433,7 @@ class ToolCallingAgent(Module):
                     )
                 except (ValidationError, json.JSONDecodeError) as e:
                     # invalid params case
-                    request = [
+                    history = [
                         Message(
                             role=self.observation_role,
                             content=str(e),
@@ -439,7 +442,7 @@ class ToolCallingAgent(Module):
                     continue
 
                 # valid tool output
-                request = Message(
+                history = Message(
                     role=self.observation_role,
                     content=self.TOOL_OUTPUT_MESSAGE.format(output=tool_response),
                 )
@@ -482,8 +485,16 @@ class OpenaiToolCallingAgent(ToolCallingAgent, Generic[M]):
         max_steps: int = 5,
         memory_size: int = 50,
         structural_output: type[M] | None = None,
+        shared_memory: Memory | None = None,
     ):
-        super().__init__(tools, max_steps, memory_size, prompt, MessageRole.TOOL)
+        super().__init__(
+            tools,
+            max_steps,
+            memory_size,
+            prompt,
+            MessageRole.TOOL,
+            shared_memory,
+        )
         self.structural_output_model = structural_output
 
     async def forward(
