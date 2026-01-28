@@ -9,7 +9,7 @@ from .prompt import Prompt
 
 class Memory:
     def __init__(self, size: int):
-        self.data = deque(maxlen=size)
+        self.data: deque[Message] = deque(maxlen=size)
 
     def add_message(self, message: Message) -> Self:
         self.data.append(message)
@@ -69,6 +69,10 @@ class MemoryModule(Module):
             history = [Message(role=self.new_message_role, content=history)]
 
         self.memory.extend(history)
+
+        while self.memory.data[0].role == MessageRole.TOOL:
+            self.memory.data.popleft()
+
         response = await self.prompt.forward(self.memory.as_list(), **kwargs)
         self.memory.add_message(response)
 
