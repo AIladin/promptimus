@@ -533,12 +533,7 @@ class OpenaiToolCallingAgent(ToolCallingAgent, Generic[M]):
         for step in range(self.max_steps):
             response = await self.predictor.forward(
                 history,
-                provider_kwargs={
-                    "tools": [
-                        tool.to_openai_function()
-                        for tool in self.tools.objects_map.values()
-                    ]
-                },
+                provider_kwargs=provider_kwargs,
                 **kwargs,
             )
 
