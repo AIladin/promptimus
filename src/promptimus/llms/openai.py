@@ -25,7 +25,7 @@ class OpenAILike(RateLimitedClient[Message]):
         self.call_kwargs = call_kwargs or {}
 
     def serialize_message(self, message: Message) -> ChatCompletionMessageParam:
-        data = message.model_dump(exclude={"content", "images"})
+        data = message.model_dump(exclude={"content", "images"}, exclude_none=True)
 
         data["content"] = [
             {"type": "text", "text": message.content},
