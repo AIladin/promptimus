@@ -165,6 +165,23 @@ agent.save("my_agent.toml")
 loaded_agent = pm.modules.MemoryModule().load("my_agent.toml")
 ```
 
+### Config Composition
+Split complex TOML configs into composable files using OmegaConf-inspired resolver syntax:
+```toml
+# main.toml — lean orchestrator config
+analysis_format = """
+<query>{query}</query>
+"""
+
+# Reference submodule configs from installed packages
+query_decomposer = "${pkg:my_lib.prompts.query_decomposer.toml}"
+
+# Or from relative file paths
+series_analyzer = "${file:./series_analyzer.toml}"
+```
+
+References are resolved at load time and inlined on save — `save()` always produces a single flat TOML.
+
 ### Tracing with Phoenix
 ```python
 import phoenix as px

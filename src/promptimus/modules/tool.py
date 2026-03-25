@@ -215,7 +215,7 @@ class Tool(Module, Generic[T]):
 
             fields[pname] = (annotation, default)
 
-        return create_model(self.fn.__name__, **fields)  # ty:ignore[possibly-missing-attribute]
+        return create_model(self.fn.__name__, **fields)  # ty: ignore[unresolved-attribute]
 
     def to_openai_function(self) -> dict:
         schema = self.build_model().model_json_schema()
@@ -511,24 +511,20 @@ class OpenaiToolCallingAgent(ToolCallingAgent, Generic[M]):
             Final response message
         """
 
-        provider_kwargs = {
+        provider_kwargs: dict[str, Any] = {
             "tools": [
                 tool.to_openai_function() for tool in self.tools.objects_map.values()
             ]
         }
 
         if self.structural_output_model is not None:
-            provider_kwargs.update(
-                {
-                    "response_format": {
-                        "type": "json_schema",
-                        "json_schema": {
-                            "name": self.structural_output_model.__name__,
-                            "schema": self.structural_output_model.model_json_schema(),
-                        },
-                    }
-                }
-            )
+            provider_kwargs["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": self.structural_output_model.__name__,
+                    "schema": self.structural_output_model.model_json_schema(),
+                },
+            }
 
         for step in range(self.max_steps):
             response = await self.predictor.forward(

@@ -904,6 +904,43 @@ user
 - `.load()` raises `KeyError` if the TOML contains keys not matching registered Parameters or submodules. The TOML must be an exact subset of what `.describe()` outputs.
 - **Always run `.describe()` on a fresh instance before hand-writing a TOML file** to verify the expected key paths.
 
+### Config Composition (OmegaConf-inspired)
+
+Split complex TOML configs into composable files using resolver syntax. References replace `[table]` sections — they are submodule-level includes.
+
+**Resolvers:**
+- `${pkg:package.path.filename.toml}` — resolved via `importlib.resources.files()`. The last two dot-components form `filename.toml`, the rest is the package path.
+- `${file:./relative/path.toml}` — resolved relative to the TOML file being loaded.
+
+**Example:**
+```toml
+# analyst.toml — lean orchestrator config
+analysis_format = """
+<query>{query}</query>
+"""
+
+query_decomposer = "${pkg:fred_source.prompts.query_decomposer.toml}"
+series_analyzer = "${file:./series_analyzer.toml}"
+compiler = "${pkg:fred_source.prompts.compiler.toml}"
+```
+
+```toml
+# series_analyzer.toml — self-contained submodule config
+max_points = 80
+
+[prompt]
+prompt = """
+You are an economic data analyst...
+"""
+role = "system"
+```
+
+**Key behaviors:**
+- Refs are resolved at load time and inlined — `save()` always produces a single flat TOML
+- No nesting: referenced files must not themselves contain `${...}` refs
+- Quotes required around ref values (TOML spec)
+- Raises `RefResolutionError` if the package/file cannot be found
+
 ---
 
 ## 10. Error Reference
@@ -922,6 +959,7 @@ All exceptions are in `promptimus.errors` and inherit from `PromptimusError`.
 | `ProviderRetryExceded` | LLM rate limit retries exhausted | Reduce concurrency, increase `n_retries`/`base_wait` |
 | `RecursiveModule` | Circular dependency in module tree | Do not add an ancestor as a submodule |
 | `InvalidToolConfig` | `handoff_include_tool_loop=True` without `handoff_history=True`, or `handoff_history=True` on a module not implementing `SupportsHandoff` | Fix the tool configuration flags |
+| `RefResolutionError` | `${pkg:...}` or `${file:...}` TOML ref cannot be resolved (missing package, file, or invalid format) | Check the package is installed / file path is correct |
 
 ---
 

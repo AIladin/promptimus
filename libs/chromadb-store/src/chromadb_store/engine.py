@@ -53,7 +53,7 @@ class ChromaVectorStore:
         else:
             results = await asyncio.to_thread(
                 collection.query,
-                query_embeddings=[embedding],
+                query_embeddings=[embedding],  # ty: ignore[invalid-argument-type]
                 n_results=n_results,
                 **kwargs,
             )
@@ -81,7 +81,7 @@ class ChromaVectorStore:
         else:
             await asyncio.to_thread(
                 collection.add,
-                embeddings=[embedding],
+                embeddings=[embedding],  # ty: ignore[invalid-argument-type]
                 documents=[content],
                 ids=[id_],
                 **kwargs,

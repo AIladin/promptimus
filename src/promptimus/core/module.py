@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from hashlib import md5
+from pathlib import Path
 from typing import Any, Self
 
 from promptimus import errors
@@ -138,9 +139,14 @@ class Module(ABC):
             f.write(self.describe())
 
     def load(self, path: str | os.PathLike) -> Self:
-        """Loads TOML file and modifies inplace module object."""
+        """Loads TOML file and modifies inplace module object.
+
+        Supports ${pkg:...} and ${file:...} references in the TOML file
+        for composing configs from external .toml files.
+        """
+        path = Path(path)
         with open(path, "r") as f:
-            module_dict = module_dict_from_toml_str(f.read())
+            module_dict = module_dict_from_toml_str(f.read(), base_path=path.parent)
             self.load_dict(module_dict)
 
         return self

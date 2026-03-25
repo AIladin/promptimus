@@ -32,3 +32,9 @@ class InvalidToolConfig(PromptimusError):
     """Raised when a tool is configured with incompatible parameters."""
 
     ...
+
+
+class RefResolutionError(PromptimusError):
+    """Raised when a ${pkg:...} or ${file:...} TOML reference cannot be resolved."""
+
+    ...

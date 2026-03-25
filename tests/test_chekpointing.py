@@ -1,7 +1,11 @@
+from pathlib import Path
+
 from promptimus.core.checkpointing import (
     module_dict_from_toml_str,
     module_dict_to_toml_str,
 )
+
+FIXTURES = Path(__file__).parent / "fixtures"
 
 MODULE = {
     "params": {
@@ -186,3 +190,31 @@ def test_to_toml():
 def test_from_toml():
     generated_module_dict = module_dict_from_toml_str(TOML_STRING)
     assert generated_module_dict == MODULE
+
+
+def test_file_ref_resolution():
+    main_toml = 'my_sub = "${file:./fixtures/sub.toml}"'
+    result = module_dict_from_toml_str(main_toml, base_path=FIXTURES.parent)
+
+    assert result["params"] == {}
+    assert "my_sub" in result["submodules"]
+    sub = result["submodules"]["my_sub"]
+    assert sub["params"]["prompt"] == "You are an analyst."
+    assert sub["params"]["role"] == "system"
+
+
+def test_pkg_ref_resolution():
+    result = module_dict_from_toml_str('agent = "${pkg:tests.fixtures.sub.toml}"')
+
+    assert "agent" in result["submodules"]
+    assert result["submodules"]["agent"]["params"]["prompt"] == "You are an analyst."
+    assert result["submodules"]["agent"]["params"]["role"] == "system"
+
+
+def test_ref_inlined_on_save():
+    main_toml = 'my_sub = "${file:./fixtures/sub.toml}"'
+    result = module_dict_from_toml_str(main_toml, base_path=FIXTURES.parent)
+
+    output = module_dict_to_toml_str(result)
+    assert "${file:" not in output
+    assert "You are an analyst." in output
