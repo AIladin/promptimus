@@ -200,6 +200,7 @@ pm.Parameter(value: T | None = None)
 - Auto-registered when assigned as a Module attribute
 - MD5 digest tracking via `.digest`
 - Survives `save()` / `load()` round-trips as TOML
+- Can be initialized with `""` and populated entirely via `.load()` — useful when all config lives in TOML
 
 ### 5.3 MemoryModule
 
@@ -312,6 +313,8 @@ result = await module.forward("I have 10 cows, I need twice the amount")
 ```
 
 **Key behaviors:**
+- When no `system_prompt` is provided, uses a built-in default prompt about generating structured JSON. You can pass `""` and load the real prompt from TOML via `.load()`.
+- In TOML, the system prompt lives at `[name.predictor.prompt]` (two levels deep: `predictor` → `prompt`), not directly under `[name]`.
 - `native=True` (default): uses OpenAI `response_format` with `json_schema`. Best for OpenAI-compatible providers.
 - `native=False`: injects JSON schema into the system prompt. Use for providers without native structured output.
 - `retry_message_role=MessageRole.USER` recommended for providers that reject consecutive TOOL messages (e.g., some Ollama models).
@@ -895,6 +898,11 @@ user
 ```
 
 **Rule:** Only `Parameter` values and registered submodule state survive `save()`/`load()`. Plain Python attributes (lists, dicts, etc.) are NOT serialized.
+
+**TOML gotchas:**
+- Root-level Parameters must appear **before** any `[section]` headers — otherwise TOML nests them under the preceding section.
+- `.load()` raises `KeyError` if the TOML contains keys not matching registered Parameters or submodules. The TOML must be an exact subset of what `.describe()` outputs.
+- **Always run `.describe()` on a fresh instance before hand-writing a TOML file** to verify the expected key paths.
 
 ---
 
