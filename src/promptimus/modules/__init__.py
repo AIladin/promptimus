@@ -2,7 +2,9 @@ from .memory import MemoryModule as MemoryModule
 from .memory import ResetMemoryContext as ResetMemoryContext
 from .prompt import Prompt as Prompt
 from .rag import RAGModule as RAGModule
+from .retrieval import RerankerProtocol as RerankerProtocol
 from .retrieval import RetrievalModule as RetrievalModule
+from .retrieval import RRFReranker as RRFReranker
 from .structural import StructuralOutput as StructuralOutput
 from .tool import OpenaiToolCallingAgent as OpenaiToolCallingAgent
 from .tool import SupportsHandoff as SupportsHandoff

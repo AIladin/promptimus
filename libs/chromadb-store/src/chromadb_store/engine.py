@@ -6,7 +6,7 @@ from chromadb.api import AsyncClientAPI, ClientAPI
 from chromadb.api.models.AsyncCollection import AsyncCollection
 from chromadb.api.models.Collection import Collection
 
-from promptimus.vectore_store.base import BaseVectorSearchResult
+from promptimus.vectore_store.base import BaseSearchResult
 
 Embedding = list[float]
 
@@ -38,13 +38,13 @@ class ChromaVectorStore:
                 )
         return self._collection
 
-    async def search(
+    async def vector_search(
         self,
         embedding: Embedding,
         n_results: int = 10,
         max_distance: float = 1,
         **kwargs,
-    ) -> list[BaseVectorSearchResult]:
+    ) -> list[BaseSearchResult]:
         collection = await self._ensure_collection()
         if isinstance(collection, AsyncCollection):
             results = await collection.query(
@@ -61,14 +61,14 @@ class ChromaVectorStore:
         assert results["documents"] is not None
         assert results["distances"] is not None
         return [
-            BaseVectorSearchResult(idx=id_, content=document)
+            BaseSearchResult(idx=id_, content=document, score=distance)
             for id_, document, distance in zip(
                 results["ids"][0], results["documents"][0], results["distances"][0]
             )
             if distance < max_distance
         ]
 
-    async def insert(
+    async def vector_insert(
         self, embedding: Embedding, content: str, id_: str | None = None, **kwargs
     ) -> str:
         if id_ is None:
