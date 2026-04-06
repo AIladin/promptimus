@@ -1,0 +1,19 @@
+[project]
+name = "promptimus-native-storage"
+version = "0.1.0"
+description = "In-memory hybrid vector + text store for promptimus."
+authors = [
+    { name = "ailadin", email = "korzhukandrew@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "rank-bm25>=0.2.2",
+    "numpy>=1.26",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/native_storage"]

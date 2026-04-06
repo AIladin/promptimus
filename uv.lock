@@ -10,6 +10,7 @@ resolution-markers = [
 members = [
     "promptimus",
     "promptimus-chromadb-store",
+    "promptimus-native-storage",
     "promptimus-phoenix-tracer",
 ]
 
@@ -1520,6 +1521,9 @@ dependencies = [
 chromadb = [
     { name = "promptimus-chromadb-store" },
 ]
+native-storage = [
+    { name = "promptimus-native-storage" },
+]
 phoenix = [
     { name = "promptimus-phoenix-tracer" },
 ]
@@ -1541,13 +1545,14 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "openai", specifier = ">=1.58.1" },
     { name = "promptimus-chromadb-store", marker = "extra == 'chromadb'", editable = "libs/chromadb-store" },
+    { name = "promptimus-native-storage", marker = "extra == 'native-storage'", editable = "libs/native-storage" },
     { name = "promptimus-phoenix-tracer", marker = "extra == 'phoenix'", editable = "libs/phoenix-tracer" },
     { name = "pydantic", specifier = ">=2.10.4" },
     { name = "pytest", marker = "extra == 'testing'", specifier = ">=8.3.4" },
     { name = "pytest-asyncio", marker = "extra == 'testing'", specifier = ">=0.25.0" },
     { name = "tomlkit", specifier = ">=0.13.2" },
 ]
-provides-extras = ["testing", "phoenix", "chromadb"]
+provides-extras = ["testing", "phoenix", "chromadb", "native-storage"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1567,6 +1572,21 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "chromadb", specifier = ">=1.0.15" }]
+
+[[package]]
+name = "promptimus-native-storage"
+version = "0.1.0"
+source = { editable = "libs/native-storage" }
+dependencies = [
+    { name = "numpy" },
+    { name = "rank-bm25" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "rank-bm25", specifier = ">=0.2.2" },
+]
 
 [[package]]
 name = "promptimus-phoenix-tracer"
@@ -2030,6 +2050,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c4/59/a5f38970f9bf07cee96128de79590bb354917914a9be11272cfc7ff26af0/pyzmq-27.1.0-cp314-cp314t-win32.whl", hash = "sha256:1f0b2a577fd770aa6f053211a55d1c47901f4d537389a034c690291485e5fe92", size = 587472, upload-time = "2025-09-08T23:08:58.18Z" },
     { url = "https://files.pythonhosted.org/packages/70/d8/78b1bad170f93fcf5e3536e70e8fadac55030002275c9a29e8f5719185de/pyzmq-27.1.0-cp314-cp314t-win_amd64.whl", hash = "sha256:19c9468ae0437f8074af379e986c5d3d7d7bfe033506af442e8c879732bedbe0", size = 661401, upload-time = "2025-09-08T23:08:59.802Z" },
     { url = "https://files.pythonhosted.org/packages/81/d6/4bfbb40c9a0b42fc53c7cf442f6385db70b40f74a783130c5d0a5aa62228/pyzmq-27.1.0-cp314-cp314t-win_arm64.whl", hash = "sha256:dc5dbf68a7857b59473f7df42650c621d7e8923fb03fa74a526890f4d33cc4d7", size = 575170, upload-time = "2025-09-08T23:09:01.418Z" },
+]
+
+[[package]]
+name = "rank-bm25"
+version = "0.2.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fc/0a/f9579384aa017d8b4c15613f86954b92a95a93d641cc849182467cf0bb3b/rank_bm25-0.2.2.tar.gz", hash = "sha256:096ccef76f8188563419aaf384a02f0ea459503fdf77901378d4fd9d87e5e51d", size = 8347, upload-time = "2022-02-16T12:10:52.196Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2a/21/f691fb2613100a62b3fa91e9988c991e9ca5b89ea31c0d3152a3210344f9/rank_bm25-0.2.2-py3-none-any.whl", hash = "sha256:7bd4a95571adadfc271746fa146a4bcfd89c0cf731e49c3d1ad863290adbe8ae", size = 8584, upload-time = "2022-02-16T12:10:50.626Z" },
 ]
 
 [[package]]

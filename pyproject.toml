@@ -28,6 +28,10 @@ chromadb = [
     "promptimus-chromadb-store"
 ]
 
+native-storage = [
+    "promptimus-native-storage"
+]
+
 
 [build-system]
 requires = ["hatchling"]
@@ -59,4 +63,5 @@ members = [
 [tool.uv.sources]
 promptimus-phoenix-tracer = { workspace = true }
 promptimus-chromadb-store = { workspace = true }
+promptimus-native-storage = { workspace = true }
 
