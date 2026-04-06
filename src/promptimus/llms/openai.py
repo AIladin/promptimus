@@ -4,7 +4,7 @@ from openai.types.chat import (
 )
 
 from promptimus.common.rate_limiting import RateLimitedClient
-from promptimus.dto import Message, MessageRole, ToolRequest
+from promptimus.dto import Message, MessageRole, ToolRequest, Usage
 
 
 class OpenAILike(RateLimitedClient[Message]):
@@ -54,11 +54,26 @@ class OpenAILike(RateLimitedClient[Message]):
                 for tc in raw.tool_calls
             ]
 
+        usage = None
+        if response.usage:
+            usage = Usage(
+                prompt_tokens=response.usage.prompt_tokens,
+                completion_tokens=response.usage.completion_tokens,
+                total_tokens=response.usage.total_tokens,
+                cached_tokens=response.usage.prompt_tokens_details.cached_tokens
+                if response.usage.prompt_tokens_details
+                else None,
+                reasoning_tokens=response.usage.completion_tokens_details.reasoning_tokens
+                if response.usage.completion_tokens_details
+                else None,
+            )
+
         return Message(
             role=MessageRole.ASSISTANT,
             content=raw.content or "",
             tool_calls=tool_calls,
             reasoning=raw.reasoning if hasattr(raw, "reasoning") else None,
+            usage=usage,
         )
 
     async def achat(self, history: list[Message], **kwargs) -> Message:

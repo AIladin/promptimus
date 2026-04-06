@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from .image import ImageContent
 from .tool import ToolRequest
+from .usage import Usage
 
 
 class MessageRole(StrEnum):
@@ -20,6 +21,7 @@ class Message(BaseModel):
     tool_calls: list[ToolRequest] | None = Field(default=None)
     tool_call_id: str | None = None
     reasoning: str | None = None
+    usage: Usage | None = None
 
     model_config = ConfigDict(extra="ignore")
 
