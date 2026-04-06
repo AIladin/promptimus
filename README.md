@@ -15,7 +15,7 @@ A PyTorch-like API for building composable LLM agents with advanced tool calling
 - 🔍 **Embeddings**: Text embedding generation with batch processing support
 - 🗄️ **Vector Stores**: ChromaDB integration with async-first vector operations
 - 🤖 **RAG (Retrieval-Augmented Generation)**: Retrieval system with conversation memory
-- 📊 **Tracing**: Arize Phoenix integration for comprehensive observability
+- 📊 **Tracing**: Arize Phoenix integration for observability with token usage and cost tracking
 - 💾 **Serialization**: TOML-based save/load for prompts and module configurations
 - ⚡ **Async First**: Built for high-performance asynchronous operations
 
@@ -93,10 +93,12 @@ agent = pm.modules.MemoryModule(
 ).with_llm(llm)
 ```
 
-**Retrieval Module**: Vector database operations for embeddings
+**Retrieval Module**: Hybrid search with vector and text stores
 ```python
-retrieval = pm.modules.RetrievalModule(n_results=5)
-retrieval.with_embedder(embedder).with_vector_store(vector_store)
+retrieval = pm.modules.RetrievalModule(
+    vector_store=vector_store,
+    n_semantic=5,
+).with_embedder(embedder)
 
 # Insert documents
 await retrieval.insert(documents)
@@ -117,9 +119,10 @@ vector_store = ChromaVectorStore(client, "my_docs")
 
 # Create RAG agent
 rag_agent = pm.modules.RAGModule(
-    n_results=3,
+    vector_store=vector_store,
+    n_semantic=3,
     memory_size=5
-).with_llm(llm).with_embedder(embedder).with_vector_store(vector_store)
+).with_llm(llm).with_embedder(embedder)
 
 # Add documents
 await rag_agent.retrieval.insert([
@@ -189,6 +192,16 @@ from phoenix_tracer import trace
 
 px.launch_app()
 trace(agent, "my_agent", project_name="my_project")
+
+# With cost tracking
+trace(
+    agent, "my_agent",
+    pricing={
+        "gpt-4.1": (2.0, 8.0),       # (input $/M tokens, output $/M tokens)
+        "gpt-4.1-mini": (0.4, 1.6),
+    },
+    project_name="my_project",
+)
 ```
 
 ### Vector Stores
@@ -207,12 +220,13 @@ embedder = pm.embedders.OpenAILikeEmbedder(
 
 # Build RAG system
 rag = pm.modules.RAGModule(
-    n_results=5,
+    vector_store=vector_store,
+    n_semantic=5,
     memory_size=10
-).with_llm(llm).with_embedder(embedder).with_vector_store(vector_store)
+).with_llm(llm).with_embedder(embedder)
 
 # Add documents
-await rag.retrieval.insert_batch([
+await rag.retrieval.insert([
     "Document 1 content...",
     "Document 2 content...",
 ])

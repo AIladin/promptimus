@@ -24,6 +24,7 @@ import promptimus as pm
 | `pm.Message`    | Pydantic model for chat messages |
 | `pm.MessageRole`| StrEnum: `USER`, `SYSTEM`, `ASSISTANT`, `TOOL` |
 | `pm.ImageContent`| Pydantic model for image payloads |
+| `pm.Usage`      | Pydantic model for LLM token usage |
 
 ### Modules (`pm.modules.*`)
 
@@ -34,7 +35,8 @@ import promptimus as pm
 | `pm.modules.Tool` | Function/module wrapper for agent tools |
 | `pm.modules.ToolCallingAgent` | ReACT text-based tool loop |
 | `pm.modules.OpenaiToolCallingAgent` | Native OpenAI function calling loop |
-| `pm.modules.RetrievalModule` | Embed query + search vector store |
+| `pm.modules.RetrievalModule` | Hybrid search (vector + text + reranking) |
+| `pm.modules.RRFReranker` | Reciprocal Rank Fusion reranker (default) |
 | `pm.modules.RAGModule` | Retrieval + memory composition |
 | `pm.modules.ResetMemoryContext` | Context manager to clear all memories |
 | `pm.modules.SupportsHandoff` | Protocol for handoff-capable modules |
@@ -65,7 +67,7 @@ from promptimus.modules.memory import Memory       # Raw shared state buffer
 
 1. **Every agent is a `pm.Module` with `async def forward()`.** Always call `super().__init__()` in your `__init__`.
 2. **Assign submodules and Parameters as instance attributes in `__init__`.** They are auto-registered via `__setattr__` for hierarchy tracking, serialization, and digest computation.
-3. **Configure providers once on the root module.** Call `.with_llm()`, `.with_embedder()`, `.with_vector_store()` on the root -- they propagate recursively to all submodules.
+3. **Configure providers once on the root module.** Call `.with_llm()` and `.with_embedder()` on the root -- they propagate recursively to all submodules. Stores (vector_store, text_store) are passed directly as constructor arguments to `RetrievalModule` / `RAGModule`.
 
 ---
 
@@ -80,6 +82,7 @@ Pydantic model. Fields:
 - `tool_calls: list[ToolRequest] | None` -- OpenAI-style tool calls (default `None`)
 - `tool_call_id: str | None` -- for TOOL role responses
 - `reasoning: str | None` -- reasoning content from supported models
+- `usage: Usage | None` -- token usage from LLM response (populated by `OpenAILike`)
 
 ### `pm.MessageRole`
 
@@ -89,6 +92,15 @@ StrEnum with values: `USER = "user"`, `SYSTEM = "system"`, `ASSISTANT = "assista
 
 - `ImageContent(url="https://...")` -- direct URL
 - `ImageContent.from_buffer(buffer: BytesIO, mimetype: str)` -- base64-encodes a buffer
+
+### `pm.Usage`
+
+Pydantic model for token usage. Populated automatically by `OpenAILike` from `response.usage`.
+- `prompt_tokens: int`
+- `completion_tokens: int`
+- `total_tokens: int`
+- `cached_tokens: int | None` -- from `prompt_tokens_details.cached_tokens`
+- `reasoning_tokens: int | None` -- from `completion_tokens_details.reasoning_tokens`
 
 ### Forward convention
 
@@ -445,20 +457,45 @@ result = await agent.forward("What is twice the factorial of 3?")
 
 ### 5.9 RetrievalModule
 
-Embed query + search vector store.
+Hybrid search module supporting vector search, text search, or both with reranking.
 
 **Constructor:**
 ```python
-pm.modules.RetrievalModule(n_results: int = 10)
+pm.modules.RetrievalModule(
+    vector_store: VectorStoreProtocol | None = None,
+    text_store: TextStoreProtocol | None = None,
+    reranker: RerankerProtocol | None = None,  # defaults to RRFReranker(k=60)
+    n_semantic: int = 10,
+    n_text: int = 10,
+    n_after_rerank: int = 10,
+)
 ```
 
+At least one of `vector_store` or `text_store` is required.
+
 **Methods:**
-- `await retrieval.insert(documents: list[str]) -> list[Hashable]` -- embed and store
-- `await retrieval.forward(query: str) -> list[str]` -- embed query and search
+- `await retrieval.insert(documents: list[str]) -> list[Hashable]` -- embed and store (requires vector_store)
+- `await retrieval.forward(query: str) -> list[BaseSearchResult]` -- search and rerank
+
+**Example:**
+```python
+retrieval = pm.modules.RetrievalModule(
+    vector_store=my_vector_store,
+    text_store=my_text_store,
+    n_semantic=10,
+    n_text=10,
+    n_after_rerank=5,
+).with_embedder(embedder)
+
+results = await retrieval.forward("query about AI")
+# results is list[BaseSearchResult] with .idx, .content, .score
+```
 
 **Key behaviors:**
-- Requires both embedder AND vector_store configured on the module
-- Returns `list[str]`, not `Message`
+- Stores are passed as constructor arguments, NOT via `with_vector_store()`
+- When both stores are provided, results are merged with RRF reranking
+- Requires embedder configured via `.with_embedder()` for vector search
+- Returns `list[BaseSearchResult]`, not `Message`
 
 ### 5.10 RAGModule
 
@@ -466,7 +503,15 @@ Retrieval + memory composition.
 
 **Constructor:**
 ```python
-pm.modules.RAGModule(n_results: int = 5, memory_size: int = 10)
+pm.modules.RAGModule(
+    vector_store: VectorStoreProtocol | None = None,
+    text_store: TextStoreProtocol | None = None,
+    reranker: RerankerProtocol | None = None,
+    n_semantic: int = 5,
+    n_text: int = 5,
+    n_after_rerank: int = 5,
+    memory_size: int = 10,
+)
 ```
 
 **Forward:**
@@ -476,18 +521,17 @@ async def forward(self, query: str, **kwargs) -> Message
 
 **Example:**
 ```python
-rag = (
-    pm.modules.RAGModule()
-    .with_llm(llm)
-    .with_embedder(embedder)
-    .with_vector_store(vector_store)
-)
+rag = pm.modules.RAGModule(
+    vector_store=my_vector_store,
+).with_llm(llm).with_embedder(embedder)
+
 await rag.retrieval.insert(["doc1...", "doc2...", "doc3..."])
 response = await rag.forward("What is the capital of Nandor?")
 ```
 
 **Key behaviors:**
-- Requires LLM + embedder + vector_store
+- Stores are passed as constructor arguments, NOT via `with_vector_store()`
+- Requires LLM + embedder
 - Internal structure: `self.retrieval` (RetrievalModule) + `self.memory_module` (MemoryModule)
 - Customizable `query_template` Parameter (default: `"Context:\n{context}\n\nQuestion: {query}"`)
 - Insert documents via `rag.retrieval.insert(docs)`
@@ -526,12 +570,13 @@ Structured data extraction?                      -> StructuralOutput
 Agent that calls functions?
   Provider supports OpenAI function calling?     -> OpenaiToolCallingAgent
   Otherwise                                      -> ToolCallingAgent
-Document search only?                            -> RetrievalModule
-Search + conversation?                           -> RAGModule
+Document search only?                            -> RetrievalModule(vector_store=..., text_store=...)
+Search + conversation?                           -> RAGModule(vector_store=...)
 Multiple agents sharing conversation?            -> shared Memory instance
 Sub-agent delegation from tool loop?             -> Tool.from_module(module, handoff_history=True)
 Clean session boundaries?                        -> ResetMemoryContext
 Typed final output from tool agent?              -> OpenaiToolCallingAgent(structural_output=Model)
+Track token usage + costs?                       -> pm.Usage on Message + Phoenix trace(pricing=...)
 ```
 
 ---
@@ -943,7 +988,52 @@ role = "system"
 
 ---
 
-## 10. Error Reference
+## 10. Phoenix Tracing & Usage Tracking
+
+### Token Usage
+
+`OpenAILike` automatically captures token usage from API responses into `Message.usage`:
+
+```python
+response = await prompt.forward([pm.Message(role=pm.MessageRole.USER, content="Hi")])
+print(response.usage)
+# Usage(prompt_tokens=12, completion_tokens=8, total_tokens=20, cached_tokens=None, reasoning_tokens=None)
+```
+
+### Tracing with Phoenix
+
+```python
+from phoenix_tracer import trace
+
+trace(agent, "my_agent", project_name="my_project", endpoint="http://localhost:4317")
+```
+
+The tracer automatically sets `llm.model_name` and `llm.token_count.*` span attributes on all LLM spans.
+
+### Cost Tracking
+
+Pass a `pricing` dict to `trace()` to compute and log costs. Keys are model names, values are `(input_cost_per_M_tokens, output_cost_per_M_tokens)` tuples:
+
+```python
+from phoenix_tracer import trace
+
+trace(
+    agent, "my_agent",
+    pricing={
+        "gpt-4.1": (2.0, 8.0),
+        "gpt-4.1-mini": (0.4, 1.6),
+        "gpt-4.1-nano": (0.1, 0.4),
+    },
+    project_name="my_project",
+    endpoint="http://localhost:4317",
+)
+```
+
+This sets `llm.cost.prompt`, `llm.cost.completion`, and `llm.cost.total` on each LLM span. Without `pricing`, only token counts are logged.
+
+---
+
+## 11. Error Reference
 
 All exceptions are in `promptimus.errors` and inherit from `PromptimusError`.
 
@@ -951,7 +1041,6 @@ All exceptions are in `promptimus.errors` and inherit from `PromptimusError`.
 |-----------|-------|-----|
 | `LLMNotSet` | Accessing `self.llm` without calling `.with_llm()` | Call `.with_llm(provider)` on root module |
 | `EmbedderNotSet` | Accessing `self.embedder` without calling `.with_embedder()` | Call `.with_embedder(embedder)` on root module |
-| `VectorStoreNotSet` | Accessing `self.vector_store` without calling `.with_vector_store()` | Call `.with_vector_store(store)` on root module |
 | `ParamNotSet` | Accessing `Parameter.value` when value is `None` | Set the parameter value before access |
 | `FailedToParseOutput` | `StructuralOutput` exhausted all retries | Strengthen prompt, check schema, increase `n_retries` |
 | `MaxIterExceeded` | Tool agent exceeded `max_steps` | Increase `max_steps`, narrow tool descriptions |
@@ -963,7 +1052,7 @@ All exceptions are in `promptimus.errors` and inherit from `PromptimusError`.
 
 ---
 
-## 11. Hard Rules
+## 12. Hard Rules
 
 1. Do not mutate hidden global state to track conversation.
 2. Do not bypass the module tree for critical runtime dependencies.
