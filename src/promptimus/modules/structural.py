@@ -3,11 +3,11 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from promptimus.core import Parameter
+from promptimus.core import Module, Parameter
 from promptimus.dto import Message, MessageRole
 from promptimus.errors import FailedToParseOutput
 
-from .memory import MemoryModule, Module
+from .prompt import Prompt
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -67,11 +67,8 @@ class StructuralOutput(Module, Generic[T]):
             DEFAULT_SYSTEM_PROMPT if not native else DEFAULT_SYSTEM_PROMPT_NO_SCHEMA
         )
 
-        self.predictor = MemoryModule(
-            memory_size=n_retries * 2,
-            system_prompt=system_prompt
-            if system_prompt is not None
-            else default_prompt,
+        self.predictor = Prompt(
+            system_prompt if system_prompt is not None else default_prompt,
         )
 
         self.retry_template = Parameter(
@@ -99,26 +96,36 @@ class StructuralOutput(Module, Generic[T]):
                 }
             }
 
-        with self.predictor.memory:
-            for _ in range(self.n_retries):
-                response = await self.predictor.forward(
-                    history,
-                    provider_kwargs=provider_kwargs,
-                    **kwargs,
+        if isinstance(history, Message):
+            messages = [history]
+        elif isinstance(history, str):
+            messages = [Message(role=MessageRole.USER, content=history)]
+        else:
+            messages = list(history)
+
+        while messages and messages[0].role == MessageRole.TOOL:
+            messages.pop(0)
+
+        for _ in range(self.n_retries):
+            response = await self.predictor.forward(
+                messages,
+                provider_kwargs=provider_kwargs,
+                **kwargs,
+            )
+            messages.append(response)
+
+            try:
+                return self.output_model.model_validate_json(
+                    response.content.strip("\n `").removeprefix("json")
                 )
-
-                try:
-                    structured_response = self.output_model.model_validate_json(
-                        response.content.strip("\n `").removeprefix("json")
-                    )
-                    return structured_response
-
-                except ValidationError as e:
-                    history = Message(
+            except ValidationError as e:
+                messages.append(
+                    Message(
                         role=self.retry_message_role,
                         content=self.retry_template.value.format(error_message=str(e)),
                     )
+                )
 
-            raise FailedToParseOutput(
-                f"Failed to parse output after {self.n_retries} retries. {self.predictor.memory}"
-            )
+        raise FailedToParseOutput(
+            f"Failed to parse output after {self.n_retries} retries. {messages}"
+        )
