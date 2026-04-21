@@ -36,7 +36,6 @@ import promptimus as pm
 | `pm.modules.ToolCallingAgent` | ReACT text-based tool loop |
 | `pm.modules.OpenaiToolCallingAgent` | Native OpenAI function calling loop |
 | `pm.modules.RetrievalModule` | Hybrid search (vector + text + reranking) |
-| `pm.modules.RRFReranker` | Reciprocal Rank Fusion reranker (default) |
 | `pm.modules.RAGModule` | Retrieval + memory composition |
 | `pm.modules.ResetMemoryContext` | Context manager to clear all memories |
 | `pm.modules.SupportsHandoff` | Protocol for handoff-capable modules |
@@ -54,6 +53,14 @@ import promptimus as pm
 |--------|-------------|
 | `pm.embedders.OpenAILikeEmbedder` | OpenAI-compatible embedding client |
 
+### Rerankers (`pm.rerankers.*`)
+
+| Symbol | Description |
+|--------|-------------|
+| `pm.rerankers.RerankerProtocol` | Protocol for query/result-list rerankers |
+| `pm.rerankers.RRFReranker` | Reciprocal Rank Fusion reranker (default fallback) |
+| `pm.rerankers.OpenAILikeReranker` | API reranker for OpenAI-compatible `/rerank` endpoints (e.g. Cohere via OpenRouter) |
+
 ### Not re-exported (direct import required)
 
 ```python
@@ -67,7 +74,7 @@ from promptimus.modules.memory import Memory       # Raw shared state buffer
 
 1. **Every agent is a `pm.Module` with `async def forward()`.** Always call `super().__init__()` in your `__init__`.
 2. **Assign submodules and Parameters as instance attributes in `__init__`.** They are auto-registered via `__setattr__` for hierarchy tracking, serialization, and digest computation.
-3. **Configure providers once on the root module.** Call `.with_llm()` and `.with_embedder()` on the root -- they propagate recursively to all submodules. Stores (vector_store, text_store) are passed directly as constructor arguments to `RetrievalModule` / `RAGModule`.
+3. **Configure providers once on the root module.** Call `.with_llm()`, `.with_embedder()`, and `.with_reranker()` on the root -- they propagate recursively to all submodules. Stores (vector_store, text_store) are passed directly as constructor arguments to `RetrievalModule` / `RAGModule`. Reranker has a built-in default (`RRFReranker(k=60)`), so `.with_reranker()` is only needed to override it.
 
 ---
 
@@ -150,6 +157,26 @@ Constructor: `OpenAILikeEmbedder(model_name: str, embed_kwargs: dict | None = No
 
 Methods: `await embedder.aembed(text) -> list[float]`, `await embedder.aembed_batch(texts) -> list[list[float]]`
 
+### OpenAILikeReranker
+
+```python
+reranker = pm.rerankers.OpenAILikeReranker(
+    model_name="cohere/rerank-4-fast",
+    base_url="https://openrouter.ai/api/v1",
+    # api_key auto-loaded from env, or pass api_key="..."
+)
+```
+
+Constructor: `OpenAILikeReranker(model_name: str, rerank_kwargs: dict | None = None, max_concurrency: int = 10, n_retries: int = 5, base_wait: float = 3.0, **client_kwargs)`
+
+`client_kwargs` are forwarded to `AsyncOpenAI(...)`. Calls `POST {base_url}/rerank` via `AsyncOpenAI.post()` — reuses the SDK's auth / retry / rate-limit plumbing.
+
+Methods:
+- `await reranker.arerank(query, documents: list[str], top_n: int | None = None) -> list[tuple[int, float]]` -- raw API (returns ranked (index, score) pairs)
+- `await reranker.forward(query, result_lists: list[list[BaseSearchResult]])` -- `RerankerProtocol`-compatible; flattens + dedupes by `idx` before calling the API, then rewraps as `BaseSearchResult` with updated scores
+
+Use this when you want a model-based reranker (Cohere / Jina / Voyage) instead of the default RRF fusion. Attach via `.with_reranker()` on any module that contains a `RetrievalModule`.
+
 ### DummyLLm (testing)
 
 ```python
@@ -162,7 +189,7 @@ Constructor: `DummyLLm(message: str = "DUMMY ASSITANT", delay: float = 3)`. Retu
 
 ### Rate limiting
 
-Built into `OpenAILike` and `OpenAILikeEmbedder`. Exponential backoff: `base_wait` seconds (default 3.0), doubling each retry, up to `n_retries` (default 5). Concurrency capped by `max_concurrency` (default 10).
+Built into `OpenAILike`, `OpenAILikeEmbedder`, and `OpenAILikeReranker`. Exponential backoff: `base_wait` seconds (default 3.0), doubling each retry, up to `n_retries` (default 5). Concurrency capped by `max_concurrency` (default 10).
 
 ---
 
@@ -464,20 +491,19 @@ Hybrid search module supporting vector search, text search, or both with reranki
 pm.modules.RetrievalModule(
     vector_store: VectorStoreProtocol | None = None,
     text_store: TextStoreProtocol | None = None,
-    reranker: RerankerProtocol | None = None,  # defaults to RRFReranker(k=60)
     n_semantic: int = 10,
     n_text: int = 10,
     n_after_rerank: int = 10,
 )
 ```
 
-At least one of `vector_store` or `text_store` is required.
+At least one of `vector_store` or `text_store` is required. The reranker is configured via `.with_reranker(...)`; if never called, falls back to `RRFReranker(k=60)`.
 
 **Methods:**
 - `await retrieval.insert(documents: list[str]) -> list[Hashable]` -- embed and store (requires vector_store)
 - `await retrieval.forward(query: str) -> list[BaseSearchResult]` -- search and rerank
 
-**Example:**
+**Example (default RRF reranker):**
 ```python
 retrieval = pm.modules.RetrievalModule(
     vector_store=my_vector_store,
@@ -491,9 +517,21 @@ results = await retrieval.forward("query about AI")
 # results is list[BaseSearchResult] with .idx, .content, .score
 ```
 
+**Example (API reranker via `.with_reranker()`):**
+```python
+retrieval = (
+    pm.modules.RetrievalModule(vector_store=vs, text_store=ts, n_after_rerank=5)
+    .with_embedder(embedder)
+    .with_reranker(pm.rerankers.OpenAILikeReranker(
+        model_name="cohere/rerank-4-fast",
+        base_url="https://openrouter.ai/api/v1",
+    ))
+)
+```
+
 **Key behaviors:**
 - Stores are passed as constructor arguments, NOT via `with_vector_store()`
-- When both stores are provided, results are merged with RRF reranking
+- Reranker is attached via `.with_reranker(...)` (propagates down the module tree like `.with_llm()`); default fallback is RRF fusion
 - Requires embedder configured via `.with_embedder()` for vector search
 - Returns `list[BaseSearchResult]`, not `Message`
 
@@ -506,7 +544,6 @@ Retrieval + memory composition.
 pm.modules.RAGModule(
     vector_store: VectorStoreProtocol | None = None,
     text_store: TextStoreProtocol | None = None,
-    reranker: RerankerProtocol | None = None,
     n_semantic: int = 5,
     n_text: int = 5,
     n_after_rerank: int = 5,
@@ -531,6 +568,7 @@ response = await rag.forward("What is the capital of Nandor?")
 
 **Key behaviors:**
 - Stores are passed as constructor arguments, NOT via `with_vector_store()`
+- Reranker attached via `.with_reranker(...)` on the `RAGModule` — propagates into the inner `RetrievalModule` automatically; defaults to RRF if unset
 - Requires LLM + embedder
 - Internal structure: `self.retrieval` (RetrievalModule) + `self.memory_module` (MemoryModule)
 - Customizable `query_template` Parameter (default: `"Context:\n{context}\n\nQuestion: {query}"`)
@@ -572,6 +610,7 @@ Agent that calls functions?
   Otherwise                                      -> ToolCallingAgent
 Document search only?                            -> RetrievalModule(vector_store=..., text_store=...)
 Search + conversation?                           -> RAGModule(vector_store=...)
+Model-based reranker (Cohere/Jina/Voyage)?       -> .with_reranker(OpenAILikeReranker(...))
 Multiple agents sharing conversation?            -> shared Memory instance
 Sub-agent delegation from tool loop?             -> Tool.from_module(module, handoff_history=True)
 Clean session boundaries?                        -> ResetMemoryContext
@@ -1041,6 +1080,7 @@ All exceptions are in `promptimus.errors` and inherit from `PromptimusError`.
 |-----------|-------|-----|
 | `LLMNotSet` | Accessing `self.llm` without calling `.with_llm()` | Call `.with_llm(provider)` on root module |
 | `EmbedderNotSet` | Accessing `self.embedder` without calling `.with_embedder()` | Call `.with_embedder(embedder)` on root module |
+| `RerankerNotSet` | Accessing `self.reranker` without calling `.with_reranker()` | Call `.with_reranker(reranker)` on root module (or rely on the RRF default inside `RetrievalModule.forward`) |
 | `ParamNotSet` | Accessing `Parameter.value` when value is `None` | Set the parameter value before access |
 | `FailedToParseOutput` | `StructuralOutput` exhausted all retries | Strengthen prompt, check schema, increase `n_retries` |
 | `MaxIterExceeded` | Tool agent exceeded `max_steps` | Increase `max_steps`, narrow tool descriptions |

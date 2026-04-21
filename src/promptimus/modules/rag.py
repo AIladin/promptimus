@@ -3,7 +3,7 @@ from promptimus.dto import Message
 from promptimus.vectore_store.base import TextStoreProtocol, VectorStoreProtocol
 
 from .memory import MemoryModule
-from .retrieval import RerankerProtocol, RetrievalModule
+from .retrieval import RetrievalModule
 
 # Default constants
 DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant."
@@ -15,7 +15,6 @@ class RAGModule(Module):
         self,
         vector_store: VectorStoreProtocol | None = None,
         text_store: TextStoreProtocol | None = None,
-        reranker: RerankerProtocol | None = None,
         n_semantic: int = 5,
         n_text: int = 5,
         n_after_rerank: int = 5,
@@ -26,7 +25,6 @@ class RAGModule(Module):
         self.retrieval = RetrievalModule(
             vector_store=vector_store,
             text_store=text_store,
-            reranker=reranker,
             n_semantic=n_semantic,
             n_text=n_text,
             n_after_rerank=n_after_rerank,

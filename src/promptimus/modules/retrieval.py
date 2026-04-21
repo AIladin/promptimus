@@ -1,41 +1,17 @@
 from collections.abc import Hashable
-from operator import itemgetter
-from typing import Any, Protocol
+from typing import Any
 
 from promptimus.core.module import Module
+from promptimus.rerankers import RerankerProtocol, RRFReranker
 from promptimus.vectore_store.base import (
     BaseSearchResult,
     TextStoreProtocol,
     VectorStoreProtocol,
 )
 
+__all__ = ["RerankerProtocol", "RRFReranker", "RetrievalModule"]
 
-class RerankerProtocol(Protocol):
-    async def forward(
-        self, query: str, result_lists: list[list[BaseSearchResult]], **kwargs: Any
-    ) -> list[BaseSearchResult]: ...
-
-
-class RRFReranker(Module):
-    def __init__(self, k: int = 60):
-        super().__init__()
-        self.k = k
-
-    async def forward(
-        self, query: str, result_lists: list[list[BaseSearchResult]], **kwargs: Any
-    ) -> list[BaseSearchResult]:
-        scores: dict[Hashable, float] = {}
-        docs: dict[Hashable, BaseSearchResult] = {}
-
-        for results in result_lists:
-            for rank, r in enumerate(results):
-                scores[r.idx] = scores.get(r.idx, 0) + 1 / (self.k + rank + 1)
-                docs.setdefault(r.idx, r)
-
-        sorted_items = sorted(scores.items(), key=itemgetter(1), reverse=True)
-        return [
-            docs[idx].model_copy(update={"score": score}) for idx, score in sorted_items
-        ]
+_DEFAULT_RERANKER = RRFReranker()
 
 
 class RetrievalModule(Module):
@@ -43,7 +19,6 @@ class RetrievalModule(Module):
         self,
         vector_store: VectorStoreProtocol | None = None,
         text_store: TextStoreProtocol | None = None,
-        reranker: RerankerProtocol | None = None,
         n_semantic: int = 10,
         n_text: int = 10,
         n_after_rerank: int = 10,
@@ -53,7 +28,6 @@ class RetrievalModule(Module):
             raise ValueError("At least one of vector_store or text_store is required")
         self.vector_store = vector_store
         self.text_store = text_store
-        self.reranker = reranker or RRFReranker()
         self.n_semantic = n_semantic
         self.n_text = n_text
         self.n_after_rerank = n_after_rerank
@@ -76,7 +50,8 @@ class RetrievalModule(Module):
                 )
             )
 
-        results = await self.reranker.forward(query, result_lists, **kwargs)
+        reranker = self._reranker or _DEFAULT_RERANKER
+        results = await reranker.forward(query, result_lists, **kwargs)
         return results[: self.n_after_rerank]
 
     async def insert(self, documents: list[str], **kwargs: Any) -> list[Hashable]:

@@ -2,7 +2,7 @@ import os
 from abc import ABC, abstractmethod
 from hashlib import md5
 from pathlib import Path
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, Self
 
 from promptimus import errors
 from promptimus.embedders import EmbedderProtocol
@@ -10,6 +10,9 @@ from promptimus.llms import LLMProtocol
 
 from .checkpointing import module_dict_from_toml_str, module_dict_to_toml_str
 from .parameters import Parameter
+
+if TYPE_CHECKING:
+    from promptimus.rerankers import RerankerProtocol
 
 
 class Module(ABC):
@@ -20,6 +23,7 @@ class Module(ABC):
         self._submodules: dict[str, "Module"] = {}
         self._embedder: EmbedderProtocol | None = None
         self._llm: LLMProtocol | None = None
+        self._reranker: "RerankerProtocol | None" = None
 
     def __setattr__(self, name: str, value: Any) -> None:
         if value is self:
@@ -85,6 +89,14 @@ class Module(ABC):
 
         return self
 
+    def with_reranker(self, reranker: "RerankerProtocol") -> Self:
+        self._reranker = reranker
+
+        for v in self._submodules.values():
+            v.with_reranker(reranker)
+
+        return self
+
     @property
     def embedder(self) -> EmbedderProtocol:
         if self._embedder is None:
@@ -96,6 +108,12 @@ class Module(ABC):
         if self._llm is None:
             raise errors.LLMNotSet()
         return self._llm
+
+    @property
+    def reranker(self) -> "RerankerProtocol":
+        if self._reranker is None:
+            raise errors.RerankerNotSet()
+        return self._reranker
 
     def serialize(self) -> dict[str, Any]:
         return {

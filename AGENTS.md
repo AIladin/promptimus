@@ -39,7 +39,7 @@ The framework is built around three interconnected concepts:
    - Automatically tracks `Parameter` objects assigned as attributes (via `__setattr__`)
    - Automatically tracks submodules in `_submodules` dict
    - Provides hierarchical path tracking (`self.path`) through parent references
-   - Implements fluent interface: `with_llm()`, `with_embedder()`, `with_vector_store()` propagate to all submodules
+   - Implements fluent interface: `with_llm()`, `with_embedder()`, `with_reranker()` propagate to all submodules
    - Enforces recursion checking to prevent circular module references
    - Requires `async def forward()` implementation (like PyTorch's `forward()`)
 
@@ -119,6 +119,11 @@ The `__setattr__` override automatically:
 - `async aembed(text) -> list[float]`
 - `async aembed_batch(texts) -> list[list[float]]`
 - Implementation: `OpenAILikeEmbedder`
+
+**RerankerProtocol** (`src/promptimus/rerankers/base.py`):
+- `async forward(query, result_lists) -> list[BaseSearchResult]`
+- Implementations: `RRFReranker` (default fallback), `OpenAILikeReranker` (API-based, e.g. Cohere via OpenRouter's `/rerank` endpoint)
+- Attached via `.with_reranker()` — propagates down the Module tree like `.with_llm()` / `.with_embedder()`
 
 **VectorStoreProtocol** (`src/promptimus/vectore_store/base.py`):
 - `async insert()`, `async search()`, `async delete()`, `async update()`
@@ -262,11 +267,17 @@ This is a UV workspace with multiple packages:
 ## Key Implementation Details
 
 ### Why Fluent Interface Pattern
-The `with_llm()`, `with_embedder()`, `with_vector_store()` methods propagate configuration down the entire module tree. This allows you to configure a complex agent hierarchy in one call:
+The `with_llm()`, `with_embedder()`, `with_reranker()` methods propagate configuration down the entire module tree. This allows you to configure a complex agent hierarchy in one call:
 ```python
-agent = RAGModule(...).with_llm(llm).with_embedder(embedder).with_vector_store(store)
+agent = (
+    RAGModule(vector_store=store)
+    .with_llm(llm)
+    .with_embedder(embedder)
+    .with_reranker(reranker)  # optional — defaults to RRFReranker inside RetrievalModule.forward
+)
 # All submodules (RetrievalModule, MemoryModule, Prompt) automatically get these dependencies
 ```
+Stores (`vector_store`, `text_store`) are passed as constructor arguments, not via fluent methods — they are per-retrieval resources, not global providers.
 
 ### Digest System
 Each `Parameter` and `Module` computes an MD5 digest used for change detection. When parameters change, digests change, allowing downstream caching/memoization systems to detect modifications.
