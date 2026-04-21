@@ -40,7 +40,7 @@ class OpenAILikeReranker(RateLimitedClient[list[tuple[int, float]]]):
         if top_n is not None:
             body["top_n"] = top_n
 
-        raw = await self.client.post("/rerank", body=body, cast_to=dict)
+        raw = await self.client.post("/rerank", body=body, cast_to=dict[str, Any])
         return [(r["index"], r["relevance_score"]) for r in raw["results"]]
 
     async def arerank(
