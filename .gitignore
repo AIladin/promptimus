@@ -174,3 +174,4 @@ shell.nix
 
 .direnv
 .envrc
+.devenv

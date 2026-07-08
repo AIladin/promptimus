@@ -45,6 +45,7 @@ import promptimus as pm
 | Symbol | Description |
 |--------|-------------|
 | `pm.llms.OpenAILike` | OpenAI-compatible LLM client |
+| `pm.llms.Claude` | Anthropic Claude client (wraps the official `anthropic` SDK) |
 | `pm.llms.OllamaProvider` | Convenience wrapper for local Ollama |
 
 ### Embedders (`pm.embedders.*`)
@@ -132,6 +133,30 @@ API key is auto loaded from env for OpenAI, no need to load it explicitly.
 Constructor: `OpenAILike(model_name: str, call_kwargs: dict | None = None, max_concurrency: int = 10, n_retries: int = 5, base_wait: float = 3.0, **client_kwargs)`
 
 `client_kwargs` are forwarded to `AsyncOpenAI(...)`.
+
+### Claude
+
+```python
+llm = pm.llms.Claude(
+    model_name="claude-opus-4-8",
+    # All extra kwargs pass to AsyncAnthropic():
+    # api_key="...", base_url="...", etc.
+)
+
+# Extended thinking (text lands in Message.reasoning):
+llm = pm.llms.Claude(
+    model_name="claude-opus-4-8",
+    call_kwargs={"thinking": {"type": "adaptive"}},
+)
+```
+
+API key is auto loaded from `ANTHROPIC_API_KEY`, no need to load it explicitly.
+
+Constructor: `Claude(model_name: str, call_kwargs: dict | None = None, max_tokens: int = 16000, max_concurrency: int = 10, n_retries: int = 5, base_wait: float = 3.0, **client_kwargs)`
+
+`client_kwargs` are forwarded to `AsyncAnthropic(...)`. `max_tokens` is Anthropic's required per-request output cap (override per-call via `call_kwargs` or a `forward` provider kwarg).
+
+Wraps the official `anthropic` SDK and translates the OpenAI-shaped `tools` / `response_format` provider kwargs emitted by `OpenaiToolCallingAgent` and `StructuralOutput(native=True)`, so those modules work against Claude unchanged. System messages are folded into Anthropic's top-level `system` param; `TOOL` messages with a `tool_call_id` become `tool_result` blocks; token usage populates `Message.usage`.
 
 ### OllamaProvider
 

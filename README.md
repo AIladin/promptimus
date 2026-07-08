@@ -50,6 +50,30 @@ response2 = await agent.forward("What's my name?")
 print(response2.content)  # "Your name is Alice!"
 ```
 
+### LLM Providers
+
+Any provider is interchangeable — pass it to `.with_llm(...)` on the root module.
+
+```python
+# OpenAI-compatible endpoints (OpenAI, OpenRouter, vLLM, ...)
+llm = pm.llms.OpenAILike(model_name="gpt-4.1-nano")  # api_key from OPENAI_API_KEY
+
+# Anthropic Claude (wraps the official `anthropic` SDK)
+llm = pm.llms.Claude(model_name="claude-opus-4-8")  # api_key from ANTHROPIC_API_KEY
+# extended thinking → text lands in Message.reasoning:
+llm = pm.llms.Claude(
+    model_name="claude-opus-4-8",
+    call_kwargs={"thinking": {"type": "adaptive"}},
+)
+
+# Local Ollama
+llm = pm.llms.OllamaProvider(model_name="gemma3:4b", base_url="http://localhost:11434/v1")
+```
+
+The `Claude` provider translates the OpenAI-shaped `tools` / `response_format` kwargs
+emitted by `OpenaiToolCallingAgent` and `StructuralOutput`, so every module works
+against Claude unchanged.
+
 ## 🏗️ Architecture
 
 ### Core Concepts
